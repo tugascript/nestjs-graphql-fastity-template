@@ -28,11 +28,11 @@
     "@mikro-orm/nestjs": "^4.3.1",
     "@mikro-orm/postgresql": "^5.0.0",
     "@mikro-orm/sqlite": "^5.0.0",
-    "@nestjs/apollo": "^10.0.0",
+    "@nestjs/apollo": "^10.0.2",
     "@nestjs/common": "^8.2.6",
-    "@nestjs/config": "^1.1.6",
+    "@nestjs/config": "^1.1.7",
     "@nestjs/core": "^8.2.6",
-    "@nestjs/graphql": "^10.0.0",
+    "@nestjs/graphql": "^10.0.2",
     "@nestjs/passport": "^8.1.0",
     "@nestjs/platform-express": "^8.2.6",
     "apollo-server-cache-redis": "^3.3.1",
@@ -65,7 +65,7 @@
     "uuid": "^8.3.2"
   },
   "devDependencies": {
-    "@faker-js/faker": "^6.0.0-alpha.5",
+    "@faker-js/faker": "^6.0.0-alpha.6",
     "@mikro-orm/cli": "^5.0.0",
     "@nestjs/cli": "^8.2.0",
     "@nestjs/schematics": "^8.0.6",
