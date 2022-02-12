@@ -19,7 +19,7 @@ import { OnlineStatusEnum } from '../../users/enums/online-status.enum';
 import { UsersModule } from '../../users/users.module';
 import { UsersService } from '../../users/users.service';
 import { AuthService } from '../auth.service';
-import { AuthType } from '../gql-types/auth.type';
+import { AuthType } from '../result-dtos/auth.result-dto';
 import {
   IAccessPayload,
   IAccessPayloadResponse,

@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { FastifyReply } from 'fastify';
 import { ICtx } from '../../common/interfaces/ctx.interface';
 import { AuthService } from '../auth.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
@@ -19,7 +20,7 @@ export class GraphQLAuthGuard implements CanActivate {
     ]);
 
     const ctx: ICtx = GqlExecutionContext.create(context).getContext();
-    const auth = ctx.reply.request.headers.authorization;
+    const auth = this.getAuth(ctx);
 
     if (!auth) return isPublic;
 
@@ -34,5 +35,12 @@ export class GraphQLAuthGuard implements CanActivate {
     } catch (error) {
       return isPublic;
     }
+  }
+
+  // For the public REST routes
+  public getAuth(ctx: Record<string, any>): string | undefined {
+    if (ctx.request) return ctx.request.headers.authorization;
+
+    return ctx.reply.request.headers.authorization;
   }
 }

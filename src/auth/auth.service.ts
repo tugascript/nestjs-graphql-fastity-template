@@ -23,7 +23,6 @@ import { ConfirmEmailDto } from './dtos/confirm-email.dto';
 import { ConfirmLoginDto } from './dtos/confirm-login.dto';
 import { ResetEmailDto } from './dtos/reset-email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
-import { AuthType } from './gql-types/auth.type';
 import { generateToken, verifyToken } from './helpers/async-jwt';
 import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
@@ -36,6 +35,7 @@ import {
   ITokenPayload,
   ITokenPayloadResponse,
 } from './interfaces/token-payload.interface';
+import { IAuthResult } from './interfaces/auth-result.interface';
 
 @Injectable()
 export class AuthService {
@@ -81,7 +81,7 @@ export class AuthService {
   public async confirmEmail(
     res: FastifyReply,
     { confirmationToken }: ConfirmEmailDto,
-  ): Promise<string> {
+  ): Promise<IAuthResult> {
     const payload = (await this.verifyAuthToken(
       confirmationToken,
       'confirmation',
@@ -98,7 +98,7 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
-    return accessToken;
+    return { accessToken };
   }
 
   /**
@@ -110,7 +110,7 @@ export class AuthService {
   public async loginUser(
     res: FastifyReply,
     { email, password }: LoginDto,
-  ): Promise<AuthType | LocalMessageType> {
+  ): Promise<IAuthResult | LocalMessageType> {
     const user = await this.usersService.getUserForAuth(email);
     const currentPassword = user.password;
     const { lastPassword, updatedAt } = user.credentials;
@@ -178,13 +178,13 @@ export class AuthService {
     user.lastLogin = new Date();
     await this.usersService.saveUserToDb(user);
 
-    return new AuthType(
+    return {
       accessToken,
-      user,
-      months >= 6
-        ? new LocalMessageType('Please confirm your credentials')
-        : undefined,
-    );
+      message:
+        months >= 6
+          ? new LocalMessageType('Please confirm your credentials')
+          : undefined,
+    };
   }
 
   /**
@@ -210,7 +210,7 @@ export class AuthService {
   public async confirmLogin(
     res: FastifyReply,
     { email, accessCode }: ConfirmLoginDto,
-  ): Promise<AuthType> {
+  ): Promise<IAuthResult> {
     const hashedCode = await this.commonService.throwInternalError(
       this.cacheManager.get<string>(uuidV5(email, this.authNamespace)),
     );
@@ -226,7 +226,7 @@ export class AuthService {
     user.lastLogin = new Date();
     await this.usersService.saveUserToDb(user);
 
-    return new AuthType(accessToken, user);
+    return { accessToken };
   }
 
   /**
@@ -235,7 +235,7 @@ export class AuthService {
    * Removes the refresh token from the cookies
    */
   public logoutUser(res: FastifyReply): LocalMessageType {
-    res.clearCookie(this.cookieName);
+    res.clearCookie(this.cookieName, { path: '/api/auth/refresh-access' });
     return new LocalMessageType('Logout Successfully');
   }
 
@@ -250,7 +250,7 @@ export class AuthService {
   public async refreshAccessToken(
     req: FastifyRequest,
     res: FastifyReply,
-  ): Promise<string> {
+  ): Promise<IAuthResult> {
     const token = req.cookies[this.cookieName];
     if (!token) throw new UnauthorizedException('Invalid refresh token');
 
@@ -262,7 +262,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
 
-    return accessToken;
+    return { accessToken };
   }
 
   /**
@@ -318,21 +318,13 @@ export class AuthService {
    *
    * Activates or deactivates two factor auth
    */
-  public async changeTwoFactorAuth(
-    userId: number,
-    activate: boolean,
-  ): Promise<LocalMessageType> {
+  public async changeTwoFactorAuth(userId: number): Promise<LocalMessageType> {
     const user = await this.usersService.getUserById(userId);
-    const status = activate ? 'activated' : 'deactivated';
 
-    if (user.twoFactor === activate)
-      throw new BadRequestException(
-        `You already have ${status} two factor authentication`,
-      );
-
-    user.twoFactor = activate;
+    user.twoFactor = !user.twoFactor;
     await this.usersService.saveUserToDb(user);
 
+    const status = user.twoFactor ? 'activated' : 'deactivated';
     return new LocalMessageType(
       `Two factor authentication ${status} successfully`,
     );
@@ -347,7 +339,7 @@ export class AuthService {
     res: FastifyReply,
     userId: number,
     { email, password }: ChangeEmailDto,
-  ): Promise<AuthType> {
+  ): Promise<IAuthResult> {
     const user = await this.usersService.getUserById(userId);
 
     if (!(await compare(password, user.password)))
@@ -360,7 +352,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
 
-    return new AuthType(accessToken, user);
+    return { accessToken };
   }
 
   /**
@@ -372,7 +364,7 @@ export class AuthService {
     res: FastifyReply,
     userId: number,
     { password, password1, password2 }: ChangePasswordDto,
-  ): Promise<AuthType> {
+  ): Promise<IAuthResult> {
     const user = await this.usersService.getUserById(userId);
 
     if (!(await compare(password, user.password)))
@@ -388,7 +380,7 @@ export class AuthService {
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
 
-    return new AuthType(accessToken, user);
+    return { accessToken };
   }
 
   //____________________ WebSocket Auth ____________________
@@ -615,7 +607,7 @@ export class AuthService {
     res.cookie(this.cookieName, token, {
       secure: !this.testing,
       httpOnly: true,
-      path: '/',
+      path: '/api/auth/refresh-access',
       expires: new Date(Date.now() + 604800000),
     });
   }
