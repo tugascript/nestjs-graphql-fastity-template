@@ -2,7 +2,7 @@ import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
 import { MercuriusDriver, MercuriusDriverConfig } from '@nestjs/mercurius';
-import { FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyRequest } from 'fastify';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { AuthService } from '../auth/auth.service';
 import { DataloadersService } from '../dataloaders/dataloaders.service';
@@ -28,22 +28,6 @@ export class GqlConfigService implements GqlOptionsFactory {
       graphiql: this.configService.get<boolean>('playground'),
       path: '/api/graphql',
       routes: true,
-      context: async (req: FastifyRequest) => {
-        const auth = req.headers.authorization;
-        console.log(req.headers);
-
-        if (auth) {
-          const arr = auth.split(' ');
-
-          if (arr[0] == 'Bearer') {
-            const { id } = await this.authService.verifyAuthToken(
-              arr[1],
-              'access',
-            );
-            return { user: id };
-          }
-        }
-      },
       subscription: {
         fullWsTransport: true,
       },

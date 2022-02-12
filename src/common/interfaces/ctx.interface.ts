@@ -1,11 +1,5 @@
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { ILoaders } from '../../dataloaders/interfaces/loaders.interface';
-import { ISubscriptionCtx } from './subscription-ctx.interface';
+import { MercuriusContext } from 'mercurius';
 
-export interface ICtx {
-  res: FastifyReply;
-  req: FastifyRequest;
+export interface ICtx extends MercuriusContext {
   user?: number;
-  loaders?: ILoaders;
-  extra?: ISubscriptionCtx;
 }

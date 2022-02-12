@@ -6,8 +6,6 @@ export const GetQuery = createParamDecorator(
   (_, context: ExecutionContext): string => {
     const ctx: ICtx = GqlExecutionContext.create(context).getContext();
 
-    if (ctx.extra) return ctx.extra.payload.query;
-
-    return ctx.req.query as string;
+    return ctx.reply.request.query as string;
   },
 );
