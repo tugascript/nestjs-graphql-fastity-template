@@ -1,15 +1,12 @@
-import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
-import { BaseRedisCache } from 'apollo-server-cache-redis';
-import responseCachePlugin from 'apollo-server-plugin-response-cache';
-import { Request } from 'express';
-import { Redis } from 'ioredis';
+import { MercuriusDriver, MercuriusDriverConfig } from '@nestjs/mercurius';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { AuthService } from '../auth/auth.service';
-import { ICtx } from '../common/interfaces/ctx.interface';
-import { ISubscriptionCtx } from '../common/interfaces/subscription-ctx.interface';
 import { DataloadersService } from '../dataloaders/dataloaders.service';
+import { PUB_SUB } from '../pubsub/pubsub.module';
 
 @Injectable()
 export class GqlConfigService implements GqlOptionsFactory {
@@ -17,66 +14,44 @@ export class GqlConfigService implements GqlOptionsFactory {
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
     private readonly loadersService: DataloadersService,
+    @Inject(PUB_SUB)
+    private readonly pubSub: RedisPubSub,
   ) {}
 
   private readonly cookieName =
     this.configService.get<string>('REFRESH_COOKIE');
   private readonly testing = this.configService.get<boolean>('testing');
 
-  public createGqlOptions(): ApolloDriverConfig {
+  public createGqlOptions(): MercuriusDriverConfig {
     return {
-      driver: ApolloDriver,
-      context: ({ req, res }): ICtx => ({
-        req,
-        res,
-        loaders: this.loadersService.createLoaders(),
-      }),
+      driver: MercuriusDriver,
+      graphiql: this.configService.get<boolean>('playground'),
       path: '/api/graphql',
-      autoSchemaFile: './schema.gql',
-      debug: this.testing,
-      sortSchema: true,
-      bodyParserConfig: false,
-      playground: this.configService.get<boolean>('playground'),
-      plugins: [responseCachePlugin()],
-      cors: {
-        origin: this.configService.get<string>('url'),
-        credentials: true,
-      },
-      cache: this.testing
-        ? undefined
-        : new BaseRedisCache({
-            client: this.configService.get<Redis>('redis'),
-          }),
-      subscriptions: {
-        'graphql-ws': {
-          onConnect: async (ctx) => {
-            const token = ctx?.connectionParams?.token as string | undefined;
+      routes: true,
+      context: async (req: FastifyRequest) => {
+        const auth = req.headers.authorization;
+        console.log(req.headers);
 
-            if (!token) throw new UnauthorizedException();
+        if (auth) {
+          const arr = auth.split(' ');
 
-            await this.setHeader(
-              (ctx.extra as ISubscriptionCtx).request,
-              token,
+          if (arr[0] == 'Bearer') {
+            const { id } = await this.authService.verifyAuthToken(
+              arr[1],
+              'access',
             );
-          },
-          onSubscribe: (ctx, message) => {
-            (ctx.extra as ISubscriptionCtx).payload = message.payload;
-            (ctx.extra as ISubscriptionCtx).loaders =
-              this.loadersService.createLoaders();
-          },
-          onClose: async (ctx) => {
-            const token = (
-              ctx.extra as ISubscriptionCtx
-            ).request.headers.authorization?.split(' ')[1] as string;
-
-            if (token) await this.authService.closeUserSession(token);
-          },
-        },
+            return { user: id };
+          }
+        }
       },
+      subscription: {
+        fullWsTransport: true,
+      },
+      autoSchemaFile: true,
     };
   }
 
-  private async setHeader(req: Request, token: string): Promise<void> {
+  private async setHeader(req: FastifyRequest, token: string): Promise<void> {
     const cookieArr: string[] = req.headers.cookie?.split('; ') ?? [];
 
     if (cookieArr.length > 0) {

@@ -1,10 +1,7 @@
-import { Field, InputType } from '@nestjs/graphql';
 import { IsString, Length, Matches, MinLength } from 'class-validator';
 import { PASSWORD_REGEX } from '../../common/constants/regex';
 
-@InputType('PasswordsInput')
-export abstract class PasswordsInput {
-  @Field(() => String)
+export abstract class PasswordsDto {
   @IsString()
   @Length(8, 35)
   @Matches(PASSWORD_REGEX, {
@@ -13,7 +10,6 @@ export abstract class PasswordsInput {
   })
   public password1!: string;
 
-  @Field(() => String)
   @IsString()
   @MinLength(1)
   public password2!: string;

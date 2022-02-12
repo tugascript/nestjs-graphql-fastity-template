@@ -1,5 +1,6 @@
 import {
   Args,
+  Context,
   Mutation,
   Parent,
   Query,
@@ -78,8 +79,11 @@ export class UsersResolver {
   @Public()
   @Query(() => PaginatedUsersType)
   public async findUsers(
+    @Context() ctx: any,
     @Args() dto: GetUsersDto,
   ): Promise<IPaginated<UserEntity>> {
+    console.log(Object.keys(ctx));
+    console.log(ctx.user);
     return this.usersService.findUsers(dto);
   }
 

@@ -8,6 +8,6 @@ export const GetQuery = createParamDecorator(
 
     if (ctx.extra) return ctx.extra.payload.query;
 
-    return ctx.req.body.query;
+    return ctx.req.query as string;
   },
 );

@@ -1,13 +1,11 @@
-import { ArgsType, Field } from '@nestjs/graphql';
-import { IsEmail, IsNumberString, Length } from 'class-validator';
+import { IsEmail, IsNumberString, IsString, Length } from 'class-validator';
 
-@ArgsType()
 export abstract class ConfirmLoginDto {
-  @Field(() => String)
+  @IsString()
   @IsEmail()
   public email: string;
 
-  @Field(() => String)
+  @IsString()
   @IsNumberString()
   @Length(6, 6, { message: 'Access code has to be 6 character long' })
   public accessCode: string;

@@ -3,18 +3,16 @@ import {
   CACHE_MANAGER,
   Inject,
   Injectable,
-  InternalServerErrorException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import { Request, Response } from 'express';
-import { sign, verify } from 'jsonwebtoken';
+import * as dayjs from 'dayjs';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/gql-types/message.type';
-import * as dayjs from 'dayjs';
 import { IJwt, ISingleJwt } from '../config/config';
 import { EmailService } from '../email/email.service';
 import { UserEntity } from '../users/entities/user.entity';
@@ -26,8 +24,9 @@ import { ConfirmLoginDto } from './dtos/confirm-login.dto';
 import { ResetEmailDto } from './dtos/reset-email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { AuthType } from './gql-types/auth.type';
-import { LoginInput } from './inputs/login.input';
-import { RegisterInput } from './inputs/register.input';
+import { generateToken, verifyToken } from './helpers/async-jwt';
+import { LoginDto } from './dtos/login.dto';
+import { RegisterDto } from './dtos/register.dto';
 import {
   IAccessPayload,
   IAccessPayloadResponse,
@@ -68,7 +67,7 @@ export class AuthService {
    * Takes the register input, creates a new user in the db
    * and asyncronously sends a confirmation email
    */
-  public async registerUser(input: RegisterInput): Promise<LocalMessageType> {
+  public async registerUser(input: RegisterDto): Promise<LocalMessageType> {
     const user = await this.usersService.createUser(input);
     this.sendConfirmationEmail(user);
     return new LocalMessageType('User registered successfully');
@@ -80,9 +79,9 @@ export class AuthService {
    * Takes a confirmation token, confirms and updates the user
    */
   public async confirmEmail(
-    res: Response,
+    res: FastifyReply,
     { confirmationToken }: ConfirmEmailDto,
-  ): Promise<AuthType> {
+  ): Promise<string> {
     const payload = (await this.verifyAuthToken(
       confirmationToken,
       'confirmation',
@@ -99,8 +98,7 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
-
-    return new AuthType(accessToken, user);
+    return accessToken;
   }
 
   /**
@@ -110,8 +108,8 @@ export class AuthService {
    * asyncronously sends it by email. If false, it sends an auth type
    */
   public async loginUser(
-    res: Response,
-    { email, password }: LoginInput,
+    res: FastifyReply,
+    { email, password }: LoginDto,
   ): Promise<AuthType | LocalMessageType> {
     const user = await this.usersService.getUserForAuth(email);
     const currentPassword = user.password;
@@ -210,7 +208,7 @@ export class AuthService {
    * and logins the user
    */
   public async confirmLogin(
-    res: Response,
+    res: FastifyReply,
     { email, accessCode }: ConfirmLoginDto,
   ): Promise<AuthType> {
     const hashedCode = await this.commonService.throwInternalError(
@@ -236,7 +234,7 @@ export class AuthService {
    *
    * Removes the refresh token from the cookies
    */
-  public logoutUser(res: Response): LocalMessageType {
+  public logoutUser(res: FastifyReply): LocalMessageType {
     res.clearCookie(this.cookieName);
     return new LocalMessageType('Logout Successfully');
   }
@@ -250,8 +248,8 @@ export class AuthService {
    * It generates both tokens so the user can stay logged in indefinatly
    */
   public async refreshAccessToken(
-    req: Request,
-    res: Response,
+    req: FastifyRequest,
+    res: FastifyReply,
   ): Promise<string> {
     const token = req.cookies[this.cookieName];
     if (!token) throw new UnauthorizedException('Invalid refresh token');
@@ -296,14 +294,13 @@ export class AuthService {
    */
   public async resetPassword({
     resetToken,
-    passwords,
+    password1,
+    password2,
   }: ResetPasswordDto): Promise<LocalMessageType> {
     const payload = (await this.verifyAuthToken(
       resetToken,
       'resetPassword',
     )) as ITokenPayloadResponse;
-
-    const { password1, password2 } = passwords;
 
     if (password1 !== password2)
       throw new BadRequestException('Passwords do not match');
@@ -347,7 +344,7 @@ export class AuthService {
    * Change current user email
    */
   public async updateEmail(
-    res: Response,
+    res: FastifyReply,
     userId: number,
     { email, password }: ChangeEmailDto,
   ): Promise<AuthType> {
@@ -372,16 +369,14 @@ export class AuthService {
    * Change current user password
    */
   public async updatePassword(
-    res: Response,
+    res: FastifyReply,
     userId: number,
-    { password, newPasswords }: ChangePasswordDto,
+    { password, password1, password2 }: ChangePasswordDto,
   ): Promise<AuthType> {
     const user = await this.usersService.getUserById(userId);
 
     if (!(await compare(password, user.password)))
       throw new BadRequestException('Wrong password!');
-
-    const { password1, password2 } = newPasswords;
 
     if (password1 !== password2)
       throw new BadRequestException('Passwords do not match');
@@ -516,6 +511,30 @@ export class AuthService {
     await this.saveSessionData(userUuid, sessionData);
   }
 
+  //____________________ OTHER METHODS ____________________
+
+  /**
+   * Verify Auth Token
+   *
+   * A generic jwt verifier that verifies all token needed for auth
+   */
+  public async verifyAuthToken(
+    token: string,
+    type: keyof IJwt,
+  ): Promise<ITokenPayloadResponse | IAccessPayloadResponse> {
+    const secret = this.configService.get<string>(`jwt.${type}.secret`);
+
+    try {
+      return await verifyToken(token, secret);
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Token has expired');
+      } else {
+        throw new UnauthorizedException(error.message);
+      }
+    }
+  }
+
   //____________________ PRIVATE METHODS ____________________
 
   /**
@@ -564,40 +583,9 @@ export class AuthService {
   ): Promise<string> {
     const { secret, time } = this.configService.get<ISingleJwt>(`jwt.${type}`);
 
-    return new Promise((resolve) => {
-      sign(payload, secret, { expiresIn: time }, (error, token) => {
-        if (error) {
-          throw new InternalServerErrorException('Something went wrong');
-        }
-        resolve(token);
-      });
-    });
-  }
-
-  /**
-   * Verify Auth Token
-   *
-   * A generic jwt verifier that verifies all token needed for auth
-   */
-  private async verifyAuthToken(
-    token: string,
-    type: keyof IJwt,
-  ): Promise<ITokenPayloadResponse | IAccessPayloadResponse> {
-    const secret = this.configService.get<string>(`jwt.${type}.secret`);
-
-    return await new Promise((resolve) => {
-      verify(token, secret, (error, payload: ITokenPayloadResponse) => {
-        if (error) {
-          if (error.name === 'TokenExpiredError') {
-            throw new UnauthorizedException('Token has expired');
-          } else {
-            throw new UnauthorizedException(error.message);
-          }
-        }
-
-        resolve(payload);
-      });
-    });
+    return await this.commonService.throwInternalError(
+      generateToken(payload, secret, time),
+    );
   }
 
   /**
@@ -623,7 +611,7 @@ export class AuthService {
    * Saves the refresh token as an http only cookie to
    * be used for refreshing the access token
    */
-  private saveRefreshCookie(res: Response, token: string): void {
+  private saveRefreshCookie(res: FastifyReply, token: string): void {
     res.cookie(this.cookieName, token, {
       secure: !this.testing,
       httpOnly: true,

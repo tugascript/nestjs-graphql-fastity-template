@@ -5,7 +5,7 @@ import { CacheModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { hash } from 'bcrypt';
-import { RegisterInput } from '../../auth/inputs/register.input';
+import { RegisterInput } from '../../auth/dtos/register.dto';
 import { ResponseMock } from '../../auth/tests/response.mock.spec';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';

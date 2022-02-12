@@ -1,9 +1,7 @@
-import { ArgsType, Field } from '@nestjs/graphql';
-import { IsEmail } from 'class-validator';
+import { IsEmail, IsString } from 'class-validator';
 
-@ArgsType()
 export abstract class ResetEmailDto {
-  @Field(() => String)
+  @IsString()
   @IsEmail()
   public email: string;
 }

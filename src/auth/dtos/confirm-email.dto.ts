@@ -1,9 +1,7 @@
-import { ArgsType, Field } from '@nestjs/graphql';
-import { IsJWT } from 'class-validator';
+import { IsJWT, IsString } from 'class-validator';
 
-@ArgsType()
 export abstract class ConfirmEmailDto {
-  @Field(() => String)
+  @IsString()
   @IsJWT()
   public confirmationToken!: string;
 }

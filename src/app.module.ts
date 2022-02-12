@@ -1,9 +1,9 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { ApolloDriver } from '@nestjs/apollo';
 import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
+import { MercuriusDriver } from '@nestjs/mercurius';
 import { AuthModule } from './auth/auth.module';
 import { GraphQLAuthGuard } from './auth/guards/gql.guard';
 import { CommonModule } from './common/common.module';
@@ -35,8 +35,8 @@ import { UsersModule } from './users/users.module';
       useClass: CacheConfig,
     }),
     GraphQLModule.forRootAsync({
-      imports: [ConfigModule, AuthModule, DataloadersModule],
-      driver: ApolloDriver,
+      imports: [ConfigModule, AuthModule, DataloadersModule, PubsubModule],
+      driver: MercuriusDriver,
       useClass: GqlConfigService,
     }),
     UsersModule,

@@ -12,7 +12,7 @@ import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
 import { Response } from 'express';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
-import { RegisterInput } from '../auth/inputs/register.input';
+import { RegisterDto } from '../auth/dtos/register.dto';
 import { ISessionData } from '../auth/interfaces/session-data.interface';
 import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
@@ -59,7 +59,7 @@ export class UsersService {
     email,
     password1,
     password2,
-  }: RegisterInput): Promise<UserEntity> {
+  }: RegisterDto): Promise<UserEntity> {
     if (password1 !== password2)
       throw new BadRequestException('Passwords do not match');
 
