@@ -2,17 +2,26 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type Auth {
-  accessToken: String!
-  message: Message
-  user: User!
+type User {
+  id: Int!
+  createdAt: String!
+  updatedAt: String!
+  name: String!
+  username: String!
+  email: String
+  picture: String
+  lastLogin: String!
+  lastOnline: String!
+  onlineStatus: OnlineStatus!
 }
 
-union AuthUnion = Auth | Message
-
-input LoginInput {
-  email: String!
-  password: String!
+enum OnlineStatus {
+  ONLINE
+  BUSY
+  IDLE
+  DO_NOT_DISTURB
+  INVISIBLE
+  OFFLINE
 }
 
 type Message {
@@ -20,52 +29,31 @@ type Message {
   message: String!
 }
 
-type Mutation {
-  changeTwoFactorAuthentication(activate: Boolean!): Message!
-  confirmCredentials: Message!
-  confirmEmail(confirmationToken: String!): Auth!
-  confirmUserLogin(accessCode: String!, email: String!): Auth!
-  deleteAccount(password: String!): Message!
-  loginUser(input: LoginInput!): AuthUnion!
-  logoutUser: Message!
-  registerUser(input: RegisterInput!): Message!
-  resetPassword(passwords: PasswordsInput!, resetToken: String!): Message!
-  sendResetPasswordEmail(email: String!): Message!
-  updateEmail(email: String!, password: String!): Auth!
-  updateOnlineStatus(defaultStatus: OnlineStatus!): Message!
-  updatePassword(newPasswords: PasswordsInput!, password: String!): Auth!
-  updateProfilePicture(picture: Upload!): User!
-}
-
-enum OnlineStatus {
-  BUSY
-  DO_NOT_DISTURB
-  IDLE
-  INVISIBLE
-  OFFLINE
-  ONLINE
-}
-
 type PageInfo {
   endCursor: String!
   hasNextPage: Boolean!
 }
 
-type PaginatedUsers {
-  edges: [UserEntityPageEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
+type UserEntityPageEdge {
+  cursor: String!
+  node: User!
 }
 
-input PasswordsInput {
-  password1: String!
-  password2: String!
+type PaginatedUsers {
+  totalCount: Int!
+  edges: [UserEntityPageEdge!]!
+  pageInfo: PageInfo!
 }
 
 type Query {
-  findUsers(after: String, cursor: UsersCursor = DATE, first: Int = 10, order: QueryOrder = DESC, search: String!): PaginatedUsers!
-  getCurrentUser: User!
+  me: User!
   getUser(username: String!): User!
+  findUsers(after: String, first: Int = 10, search: String!, cursor: UsersCursor = DATE, order: QueryOrder = DESC): PaginatedUsers!
+}
+
+enum UsersCursor {
+  DATE
+  ALPHABET
 }
 
 enum QueryOrder {
@@ -75,35 +63,12 @@ enum QueryOrder {
   desc
 }
 
-input RegisterInput {
-  email: String!
-  name: String!
-  password1: String!
-  password2: String!
+type Mutation {
+  updateProfilePicture(picture: Upload!): User!
+  updateOnlineStatus(defaultStatus: OnlineStatus!): Message!
+  deleteAccount(password: String!): Message!
+  testFileUpload(file: Upload!): String!
 }
 
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
-
-type User {
-  createdAt: String!
-  email: String
-  id: Int!
-  lastLogin: String!
-  lastOnline: String!
-  name: String!
-  onlineStatus: OnlineStatus!
-  picture: String
-  updatedAt: String!
-  username: String!
-}
-
-type UserEntityPageEdge {
-  cursor: String!
-  node: User!
-}
-
-enum UsersCursor {
-  ALPHABET
-  DATE
-}

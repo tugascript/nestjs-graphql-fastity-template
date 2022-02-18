@@ -1,5 +1,6 @@
 import {
   Args,
+  Context,
   Mutation,
   Parent,
   Query,
@@ -7,6 +8,7 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { Response } from 'express';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetRes } from '../auth/decorators/get-res.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -52,12 +54,23 @@ export class UsersResolver {
     return this.usersService.deleteUser(res, userId, password);
   }
 
+  @Public()
+  @Mutation(() => String)
+  public async testFileUpload(
+    @Args({
+      type: () => GraphQLUpload,
+      name: 'file',
+    })
+    file: Promise<FileUpload>,
+  ): Promise<string> {
+    console.log(await file);
+    return 'hello';
+  }
+
   //____________________ QUERIES ____________________
 
   @Query(() => UserEntity)
-  public async getCurrentUser(
-    @CurrentUser() userId: number,
-  ): Promise<UserEntity> {
+  public async me(@CurrentUser() userId: number): Promise<UserEntity> {
     return this.usersService.getUserById(userId);
   }
 

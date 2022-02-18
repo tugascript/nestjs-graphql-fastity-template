@@ -1,10 +1,10 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { FastifyReply } from 'fastify';
-import { ICtx } from '../../common/interfaces/ctx.interface';
+import { MercuriusContext } from 'mercurius';
 import { AuthService } from '../auth.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { IExtendedRequest } from '../interfaces/extended-request.interface';
 
 @Injectable()
 export class GraphQLAuthGuard implements CanActivate {
@@ -19,8 +19,8 @@ export class GraphQLAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    const ctx: ICtx = GqlExecutionContext.create(context).getContext();
-    const auth = this.getAuth(ctx);
+    const request = this.getRequest(context);
+    const auth = request.headers.authorization;
 
     if (!auth) return isPublic;
 
@@ -30,7 +30,7 @@ export class GraphQLAuthGuard implements CanActivate {
 
     try {
       const { id } = await this.authService.verifyAuthToken(arr[1], 'access');
-      ctx.user = id;
+      request.user = id;
       return true;
     } catch (error) {
       return isPublic;
@@ -38,9 +38,13 @@ export class GraphQLAuthGuard implements CanActivate {
   }
 
   // For the public REST routes
-  public getAuth(ctx: Record<string, any>): string | undefined {
-    if (ctx.request) return ctx.request.headers.authorization;
+  public getRequest(context: ExecutionContext): IExtendedRequest {
+    if (context.getType() === 'http') {
+      return context.switchToHttp().getRequest();
+    }
 
-    return ctx.reply.request.headers.authorization;
+    return (
+      GqlExecutionContext.create(context).getContext() as MercuriusContext
+    ).reply.request as unknown as IExtendedRequest;
   }
 }

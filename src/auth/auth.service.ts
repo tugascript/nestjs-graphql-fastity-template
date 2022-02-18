@@ -391,16 +391,9 @@ export class AuthService {
    * Takes a normal access token and a refresh token, and
    * generates a ws access token for ws authentication
    */
-  public async generateWsAccessToken(
-    accessToken: string,
-    refreshToken: string,
-  ): Promise<string> {
-    await this.verifyAuthToken(accessToken, 'access');
-    const payload = (await this.verifyAuthToken(
-      refreshToken,
-      'refresh',
-    )) as ITokenPayloadResponse;
-    const user = await this.usersService.getUserByPayload(payload);
+  public async generateWsAccessToken(accessToken: string): Promise<string> {
+    const { id } = await this.verifyAuthToken(accessToken, 'access');
+    const user = await this.usersService.getUserById(id);
 
     if (!user.confirmed) {
       this.sendConfirmationEmail(user);

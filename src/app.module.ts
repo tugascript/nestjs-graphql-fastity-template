@@ -3,18 +3,16 @@ import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
-import { MercuriusDriver } from '@nestjs/mercurius';
 import { AuthModule } from './auth/auth.module';
 import { GraphQLAuthGuard } from './auth/guards/gql.guard';
 import { CommonModule } from './common/common.module';
 import { CacheConfig } from './config/cache.config';
 import { config } from './config/config';
 import { GqlConfigService } from './config/graphql.config';
+import { GraphQLDriver } from './config/graphql.driver';
 import { MikroOrmConfig } from './config/mikroorm.config';
 import { validationSchema } from './config/validation';
-import { DataloadersModule } from './dataloaders/dataloaders.module';
 import { EmailModule } from './email/email.module';
-import { PubsubModule } from './pubsub/pubsub.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
 
@@ -35,8 +33,8 @@ import { UsersModule } from './users/users.module';
       useClass: CacheConfig,
     }),
     GraphQLModule.forRootAsync({
-      imports: [ConfigModule, AuthModule, DataloadersModule, PubsubModule],
-      driver: MercuriusDriver,
+      imports: [ConfigModule, AuthModule],
+      driver: GraphQLDriver,
       useClass: GqlConfigService,
     }),
     UsersModule,
@@ -44,8 +42,6 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     EmailModule,
     UploaderModule,
-    PubsubModule,
-    DataloadersModule,
   ],
   providers: [
     {

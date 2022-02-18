@@ -1,57 +1,61 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
-import { MercuriusDriver, MercuriusDriverConfig } from '@nestjs/mercurius';
+import altair from 'altair-fastify-plugin';
 import { FastifyRequest } from 'fastify';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PubSub } from 'graphql-subscriptions';
+import { RedisOptions } from 'ioredis';
+import mercuriusCache from 'mercurius-cache';
 import { AuthService } from '../auth/auth.service';
-import { DataloadersService } from '../dataloaders/dataloaders.service';
-import { PUB_SUB } from '../pubsub/pubsub.module';
+import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
 
 @Injectable()
 export class GqlConfigService implements GqlOptionsFactory {
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
-    private readonly loadersService: DataloadersService,
-    @Inject(PUB_SUB)
-    private readonly pubSub: RedisPubSub,
   ) {}
 
   private readonly cookieName =
     this.configService.get<string>('REFRESH_COOKIE');
   private readonly testing = this.configService.get<boolean>('testing');
 
-  public createGqlOptions(): MercuriusDriverConfig {
+  public createGqlOptions(): MercuriusExtendedDriverConfig {
     return {
-      driver: MercuriusDriver,
-      graphiql: this.configService.get<boolean>('playground'),
+      graphiql: false,
+      ide: false,
       path: '/api/graphql',
       routes: true,
       subscription: {
         fullWsTransport: true,
+        pubsub: this.configService.get<boolean>('testing')
+          ? new PubSub()
+          : new RedisPubSub({
+              connection: this.configService.get<RedisOptions>('redis'),
+            }),
       },
-      autoSchemaFile: true,
+      context: (req: FastifyRequest) => {
+        return { authorization: req.headers.authorization };
+      },
+      plugins: [
+        {
+          plugin: mercuriusCache,
+          options: {
+            ttl: this.configService.get<number>('ttl'),
+            all: true,
+          },
+        },
+        {
+          plugin: altair,
+          options: {
+            path: '/altair',
+            baseURL: '/altair/',
+            endpointURL: '/api/graphql',
+          },
+        },
+      ],
+      autoSchemaFile: './schema.gql',
     };
-  }
-
-  private async setHeader(req: FastifyRequest, token: string): Promise<void> {
-    const cookieArr: string[] = req.headers.cookie?.split('; ') ?? [];
-
-    if (cookieArr.length > 0) {
-      for (const cookie of cookieArr) {
-        if (cookie.startsWith(`${this.cookieName}=`)) {
-          const refreshToken = cookie.split('=')[1];
-          const wsToken = await this.authService.generateWsAccessToken(
-            token,
-            refreshToken,
-          );
-          req.headers.authorization = `Bearer ${wsToken}`;
-          return;
-        }
-      }
-    }
-
-    throw new UnauthorizedException();
   }
 }

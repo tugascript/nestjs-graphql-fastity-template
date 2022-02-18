@@ -5,8 +5,8 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { UploadOptions } from 'graphql-upload';
 import cookieParser from 'fastify-cookie';
+import { UploadOptions } from 'graphql-upload';
 import MercuriusGQLUpload from 'mercurius-upload';
 import { AppModule } from './app.module';
 
