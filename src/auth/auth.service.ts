@@ -8,12 +8,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/gql-types/message.type';
-import { IJwt, ISingleJwt } from '../config/config';
+import { IJwt, ISingleJwt } from '../config/interfaces/jwt.interface';
 import { EmailService } from '../email/email.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { UsersService } from '../users/users.service';
@@ -21,21 +21,21 @@ import { ChangeEmailDto } from './dtos/change-email.dto';
 import { ChangePasswordDto } from './dtos/change-password.input';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
 import { ConfirmLoginDto } from './dtos/confirm-login.dto';
+import { LoginDto } from './dtos/login.dto';
+import { RegisterDto } from './dtos/register.dto';
 import { ResetEmailDto } from './dtos/reset-email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { generateToken, verifyToken } from './helpers/async-jwt';
-import { LoginDto } from './dtos/login.dto';
-import { RegisterDto } from './dtos/register.dto';
 import {
   IAccessPayload,
   IAccessPayloadResponse,
 } from './interfaces/access-payload.interface';
+import { IAuthResult } from './interfaces/auth-result.interface';
 import { ISessionData } from './interfaces/session-data.interface';
 import {
   ITokenPayload,
   ITokenPayloadResponse,
 } from './interfaces/token-payload.interface';
-import { IAuthResult } from './interfaces/auth-result.interface';
 
 @Injectable()
 export class AuthService {

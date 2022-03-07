@@ -1,53 +1,9 @@
-import { MikroOrmModuleOptions } from '@mikro-orm/nestjs';
-import { S3ClientConfig } from '@aws-sdk/client-s3';
-import { UploadOptions } from 'graphql-upload';
-import * as Redis from 'ioredis';
 import { LoadStrategy } from '@mikro-orm/core';
+import { IConfig } from './interfaces/config.interface';
 
-export type tLikeOperator = '$ilike' | '$like';
-
-export interface ISingleJwt {
-  secret: string;
-  time: number;
-}
-
-export interface IJwt {
-  access: ISingleJwt;
-  confirmation: ISingleJwt;
-  resetPassword: ISingleJwt;
-  refresh: ISingleJwt;
-  wsAccess: ISingleJwt;
-}
-
-interface IEmailAuth {
-  user: string;
-  pass: string;
-}
-
-export interface IEmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: IEmailAuth;
-}
-
-export interface IConfig {
-  port: number;
-  playground: boolean;
-  url: string;
-  db: MikroOrmModuleOptions;
-  jwt: IJwt;
-  emailService: IEmailConfig;
-  bucketConfig: S3ClientConfig;
-  redis: Redis.Redis | null;
-  ttl: number;
-  upload: UploadOptions;
-  testing: boolean;
-  likeOperator: tLikeOperator;
-}
-
-export const config = (): IConfig => {
+export function config(): IConfig {
   const TESTING = process.env.NODE_ENV !== 'production';
+
   return {
     port: parseInt(process.env.PORT, 10),
     playground: process.env.PLAYGROUND === 'true',
@@ -115,10 +71,10 @@ export const config = (): IConfig => {
         },
     redis: TESTING
       ? null
-      : new Redis({
+      : {
           host: process.env.REDIS_HOST,
           port: parseInt(process.env.REDIS_PORT, 10),
-        }),
+        },
     ttl: parseInt(process.env.REDIS_CACHE_TTL, 10),
     upload: {
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10),
@@ -127,4 +83,4 @@ export const config = (): IConfig => {
     testing: TESTING,
     likeOperator: TESTING ? '$like' : '$ilike',
   };
-};
+}

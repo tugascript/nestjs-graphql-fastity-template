@@ -1,12 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
-import altair from 'altair-fastify-plugin';
-import { FastifyRequest } from 'fastify';
-import { RedisPubSub } from 'graphql-redis-subscriptions';
-import { PubSub } from 'graphql-subscriptions';
 import { RedisOptions } from 'ioredis';
 import mercuriusCache from 'mercurius-cache';
+import redis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
 
@@ -17,9 +14,8 @@ export class GqlConfigService implements GqlOptionsFactory {
     private readonly authService: AuthService,
   ) {}
 
-  private readonly cookieName =
-    this.configService.get<string>('REFRESH_COOKIE');
   private readonly testing = this.configService.get<boolean>('testing');
+  private readonly redisOpt = this.configService.get<RedisOptions>('redis');
 
   public createGqlOptions(): MercuriusExtendedDriverConfig {
     return {
@@ -29,14 +25,26 @@ export class GqlConfigService implements GqlOptionsFactory {
       routes: true,
       subscription: {
         fullWsTransport: true,
-        pubsub: this.configService.get<boolean>('testing')
-          ? new PubSub()
-          : new RedisPubSub({
-              connection: this.configService.get<RedisOptions>('redis'),
-            }),
-      },
-      context: (req: FastifyRequest) => {
-        return { authorization: req.headers.authorization };
+        emitter: this.testing ? undefined : redis(this.redisOpt),
+        onConnect: async ({ payload }) => {
+          const authParam: string | undefined = payload.authorization;
+
+          if (!authParam) return {};
+
+          const authArr = authParam.split(' ');
+
+          if (authArr[0] !== 'Bearer') return {};
+
+          try {
+            const wsAccess = await this.authService.generateWsAccessToken(
+              authArr[1],
+            );
+
+            return { wsAccess };
+          } catch (_) {
+            return {};
+          }
+        },
       },
       plugins: [
         {
@@ -44,14 +52,6 @@ export class GqlConfigService implements GqlOptionsFactory {
           options: {
             ttl: this.configService.get<number>('ttl'),
             all: true,
-          },
-        },
-        {
-          plugin: altair,
-          options: {
-            path: '/altair',
-            baseURL: '/altair/',
-            endpointURL: '/api/graphql',
           },
         },
       ],
