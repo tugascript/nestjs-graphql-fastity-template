@@ -1,6 +1,5 @@
 import {
   Args,
-  Context,
   Mutation,
   Parent,
   Query,
@@ -8,7 +7,6 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { Response } from 'express';
-import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetRes } from '../auth/decorators/get-res.decorator';
 import { Public } from '../auth/decorators/public.decorator';
@@ -21,15 +19,16 @@ import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
 import { OnlineStatusEnum } from './enums/online-status.enum';
 import { PaginatedUsersType } from './gql-types/paginated-users.type';
+import { UserType } from './gql-types/user.type';
 import { UsersService } from './users.service';
 
-@Resolver(() => UserEntity)
+@Resolver(() => UserType)
 export class UsersResolver {
   constructor(private readonly usersService: UsersService) {}
 
   //____________________ MUTATIONS ____________________
 
-  @Mutation(() => UserEntity)
+  @Mutation(() => UserType)
   public async updateProfilePicture(
     @CurrentUser() userId: number,
     @Args() dto: ProfilePictureDto,
@@ -54,22 +53,9 @@ export class UsersResolver {
     return this.usersService.deleteUser(res, userId, password);
   }
 
-  @Public()
-  @Mutation(() => String)
-  public async testFileUpload(
-    @Args({
-      type: () => GraphQLUpload,
-      name: 'file',
-    })
-    file: Promise<FileUpload>,
-  ): Promise<string> {
-    console.log(await file);
-    return 'hello';
-  }
-
   //____________________ QUERIES ____________________
 
-  @Query(() => UserEntity)
+  @Query(() => UserType)
   public async me(@CurrentUser() userId: number): Promise<UserEntity> {
     return this.usersService.getUserById(userId);
   }
@@ -83,7 +69,7 @@ export class UsersResolver {
   */
 
   @Public()
-  @Query(() => UserEntity)
+  @Query(() => UserType)
   public async getUser(@Args() dto: GetUserDto): Promise<UserEntity> {
     return this.usersService.getUserByUsername(dto.username);
   }

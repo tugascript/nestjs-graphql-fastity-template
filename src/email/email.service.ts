@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createTransport } from 'nodemailer';
-import { IEmailConfig } from '../config/config';
+import { IEmailConfig } from '../config/interfaces/email-config.interface';
 import { UserEntity } from '../users/entities/user.entity';
 import { confirmationEmail } from './templates/confirmation';
 import { loginConfirmationEmail } from './templates/login-confirmation';

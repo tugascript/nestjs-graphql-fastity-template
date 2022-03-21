@@ -6,11 +6,13 @@ import {
 } from '@aws-sdk/client-s3';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sharp from 'sharp';
+import sharp from 'sharp';
+import { IBucketData } from 'src/config/interfaces/bucket-data.inteface';
 import { Readable } from 'stream';
+import { v4 as uuidV4 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { FileUploadDto } from './dtos/file-upload.dto';
-import { v4 as uuidV4 } from 'uuid';
+import { MAX_WIDTH, QUALITY_ARRAY } from './utils/uploader.constants';
 
 @Injectable()
 export class UploaderService {
@@ -22,14 +24,8 @@ export class UploaderService {
   private readonly client = new S3Client(
     this.configService.get<S3ClientConfig>('bucketConfig'),
   );
-  private readonly bucketName = this.configService.get<string>('BUCKET_NAME');
-  private readonly bucketRegion =
-    this.configService.get<string>('BUCKET_REGION');
-  private readonly url = `https://${this.bucketName}.${this.bucketRegion}.linodeobjects.com/`;
-  private readonly qualityArr = [
-    90, 80, 70, 65, 60, 55, 50, 45, 40, 35, 30, 25, 20, 15, 10,
-  ];
-  private readonly width = 2160;
+  private readonly bucketData =
+    this.configService.get<IBucketData>('bucketData');
 
   /**
    * Upload Image
@@ -68,7 +64,7 @@ export class UploaderService {
     try {
       await this.client.send(
         new DeleteObjectCommand({
-          Bucket: this.bucketName,
+          Bucket: this.bucketData.name,
           Key: keyArr[keyArr.length - 1],
         }),
       );
@@ -85,9 +81,7 @@ export class UploaderService {
   }
 
   private validateBucketUrl(url: string): boolean {
-    return url.includes(
-      `${this.bucketName}.${this.bucketRegion}.linodeobjects.com`,
-    );
+    return url.includes(this.bucketData.url.substring(8));
   }
 
   private async compressImage(buffer: Buffer, ratio?: number): Promise<Buffer> {
@@ -98,15 +92,16 @@ export class UploaderService {
 
     if (ratio)
       compressBuffer.resize({
-        width: this.width,
-        height: Math.round(this.width * ratio),
+        width: MAX_WIDTH,
+        height: Math.round(MAX_WIDTH * ratio),
         fit: 'cover',
       });
 
     compressBuffer = await compressBuffer.toBuffer();
 
     if (compressBuffer.length > 256000) {
-      for (const quality of this.qualityArr) {
+      for (let i = 0; i < QUALITY_ARRAY.length; i++) {
+        const quality = QUALITY_ARRAY[i];
         const smallerBuffer = await sharp(compressBuffer)
           .jpeg({
             quality,
@@ -145,7 +140,7 @@ export class UploaderService {
     await this.commonService.throwInternalError(
       this.client.send(
         new PutObjectCommand({
-          Bucket: this.bucketName,
+          Bucket: this.bucketData.name,
           Body: fileBuffer,
           Key: key,
           ACL: 'public-read',
@@ -153,6 +148,6 @@ export class UploaderService {
       ),
     );
 
-    return this.url + key;
+    return this.bucketData.url + key;
   }
 }

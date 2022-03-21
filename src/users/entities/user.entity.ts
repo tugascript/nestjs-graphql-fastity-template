@@ -6,7 +6,6 @@ import {
   OptionalProps,
   Property,
 } from '@mikro-orm/core';
-import { Field, ObjectType } from '@nestjs/graphql';
 import {
   IsBoolean,
   IsDate,
@@ -22,16 +21,16 @@ import { NAME_REGEX, SLUG_REGEX } from '../../common/constants/regex';
 import { LocalBaseEntity } from '../../common/entities/base.entity';
 import { CredentialsEmbeddable } from '../embeddables/credentials.embeddable';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
-import { ownerMiddleware } from '../middleware/owner.middleware';
+import { IUser } from '../interfaces/user.interface';
 
-@ObjectType('User')
 @Entity({ tableName: 'users' })
-export class UserEntity extends LocalBaseEntity {
+export class UserEntity extends LocalBaseEntity implements IUser {
   [OptionalProps]?:
     | 'id'
     | 'createdAt'
     | 'updatedAt'
     | 'picture'
+    | 'onlineStatus'
     | 'defaultStatus'
     | 'confirmed'
     | 'suspended'
@@ -40,26 +39,22 @@ export class UserEntity extends LocalBaseEntity {
     | 'lastLogin'
     | 'lastOnline';
 
-  @Field(() => String)
   @Property({ columnType: 'varchar(100)' })
   @IsString()
   @Length(3, 100)
   @Matches(NAME_REGEX)
   public name!: string;
 
-  @Field(() => String)
   @Property({ columnType: 'varchar(110)', unique: true })
   @IsString()
   @Length(3, 110)
   @Matches(SLUG_REGEX)
   public username!: string;
 
-  @Field(() => String, { nullable: true, middleware: [ownerMiddleware] })
   @Property({ columnType: 'varchar(255)', unique: true })
   @IsEmail()
   public email!: string;
 
-  @Field(() => String, { nullable: true })
   @Property({ columnType: 'varchar(255)', nullable: true })
   @IsOptional()
   @IsUrl()
@@ -68,6 +63,14 @@ export class UserEntity extends LocalBaseEntity {
   @Property()
   @IsString()
   public password!: string;
+
+  @Enum({
+    items: () => OnlineStatusEnum,
+    default: OnlineStatusEnum.OFFLINE,
+    columnType: 'varchar(14)',
+  })
+  @IsEnum(OnlineStatusEnum)
+  public onlineStatus: OnlineStatusEnum = OnlineStatusEnum.OFFLINE;
 
   @Enum({
     items: () => OnlineStatusEnum,
@@ -92,12 +95,10 @@ export class UserEntity extends LocalBaseEntity {
   @Embedded(() => CredentialsEmbeddable)
   public credentials: CredentialsEmbeddable = new CredentialsEmbeddable();
 
-  @Field(() => String)
   @Property()
   @IsDate()
   public lastLogin: Date = new Date();
 
-  @Field(() => String)
   @Property()
   @IsDate()
   public lastOnline: Date = new Date();

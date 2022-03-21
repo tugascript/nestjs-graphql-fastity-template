@@ -6,8 +6,10 @@ import {
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
 import cookieParser from 'fastify-cookie';
+import fastifyStatic from 'fastify-static';
 import { UploadOptions } from 'graphql-upload';
 import MercuriusGQLUpload from 'mercurius-upload';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -22,7 +24,14 @@ async function bootstrap() {
   });
   app.register(cookieParser);
   app.register(MercuriusGQLUpload, configService.get<UploadOptions>('upload'));
+  app.register(fastifyStatic, {
+    root: join(__dirname, '..', 'public'),
+    decorateReply: false,
+  });
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(configService.get<number>('port'));
+  await app.listen(
+    configService.get<number>('port'),
+    configService.get<boolean>('testing') ? '127.0.0.1' : '0.0.0.0', // because of nginx
+  );
 }
 bootstrap();

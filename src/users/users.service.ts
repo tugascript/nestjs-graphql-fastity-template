@@ -18,7 +18,7 @@ import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { IPaginated } from '../common/interfaces/paginated.interface';
-import { tLikeOperator } from '../config/config';
+import { tLikeOperator } from '../config/interfaces/jwt.interface';
 import { UploaderService } from '../uploader/uploader.service';
 import { GetUsersDto } from './dtos/get-users.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
@@ -127,6 +127,7 @@ export class UsersService {
 
     if (sessionData) {
       sessionData.status = defaultStatus;
+      user.onlineStatus = defaultStatus;
       await this.commonService.throwInternalError(
         this.cacheManager.set<ISessionData>(userUuid, sessionData, {
           ttl: this.wsAccessTime,

@@ -16,6 +16,7 @@ import { LocalMessageType } from '../common/gql-types/message.type';
 import { IJwt, ISingleJwt } from '../config/interfaces/jwt.interface';
 import { EmailService } from '../email/email.service';
 import { UserEntity } from '../users/entities/user.entity';
+import { OnlineStatusEnum } from '../users/enums/online-status.enum';
 import { UsersService } from '../users/users.service';
 import { ChangeEmailDto } from './dtos/change-email.dto';
 import { ChangePasswordDto } from './dtos/change-password.input';
@@ -385,77 +386,31 @@ export class AuthService {
 
   //____________________ WebSocket Auth ____________________
 
-  /**
-   * Generate Ws Access Token
-   *
-   * Takes a normal access token and a refresh token, and
-   * generates a ws access token for ws authentication
-   */
-  public async generateWsAccessToken(accessToken: string): Promise<string> {
+  public async generateWsSession(
+    accessToken: string,
+    deviceId: string,
+  ): Promise<[number, string]> {
     const { id } = await this.verifyAuthToken(accessToken, 'access');
     const user = await this.usersService.getUserById(id);
-
-    if (!user.confirmed) {
-      this.sendConfirmationEmail(user);
-      throw new UnauthorizedException(
-        'Please confirm your email, a new email has been sent',
-      );
-    }
-
     const userUuid = uuidV5(user.id.toString(), this.wsNamespace);
-
     let sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionData>(userUuid),
     );
 
-    if (!sessionData)
+    if (!sessionData) {
       sessionData = {
         count: user.credentials.version,
         status: user.defaultStatus,
         sessions: {},
       };
+      user.onlineStatus = user.defaultStatus;
+    }
 
     const sessionId = uuidV4();
-    sessionData.sessions[sessionId] = dayjs().unix();
+    sessionData.sessions[sessionId] = deviceId;
     await this.saveSessionData(userUuid, sessionData);
 
-    return await this.generateAuthToken({ id: user.id, sessionId }, 'wsAccess');
-  }
-
-  /**
-   * Refresh User Session
-   *
-   * Refreshes user's websocket session, if session expired or is
-   * invalid deletes it from cache and db, if it's the only one
-   * makes the user online status offline
-   */
-  public async refreshUserSession(
-    userId: number,
-    sessionId: string,
-  ): Promise<void> {
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
-    const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionData>(userUuid),
-    );
-
-    if (!sessionData || !sessionData.sessions[sessionId])
-      throw new UnauthorizedException('Invalid user session');
-
-    const now = dayjs().unix();
-
-    if (now - sessionData.sessions[sessionId] > this.accessTime) {
-      const { credentials } = await this.usersService.getUserById(userId);
-
-      if (credentials.version !== sessionData.count) {
-        await this.commonService.throwInternalError(
-          this.cacheManager.del(userUuid),
-        );
-        throw new UnauthorizedException('Credentials have been changed');
-      }
-
-      sessionData.sessions[sessionId] = now;
-      await this.saveSessionData(userUuid, sessionData);
-    }
+    return [id, sessionId];
   }
 
   /**
@@ -464,16 +419,11 @@ export class AuthService {
    * Removes websocket session from cache and db, if its the only
    * one, makes the user online status offline
    */
-  public async closeUserSession(wsAccessToken: string): Promise<void> {
-    const payload = (await this.verifyAuthToken(
-      wsAccessToken,
-      'access',
-    )) as IAccessPayloadResponse;
-    const { sessionId, id } = payload;
-
-    if (!sessionId) throw new UnauthorizedException('Invalid session id');
-
-    const userUuid = uuidV5(id.toString(), this.wsNamespace);
+  public async closeUserSession(
+    userId: number,
+    sessionId: string,
+  ): Promise<void> {
+    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
     const sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionData>(userUuid),
     );
@@ -487,8 +437,9 @@ export class AuthService {
       await this.commonService.throwInternalError(
         this.cacheManager.del(userUuid),
       );
-      const user = await this.usersService.getUserById(id);
+      const user = await this.usersService.getUserById(userId);
       user.lastOnline = new Date();
+      user.onlineStatus = OnlineStatusEnum.OFFLINE;
       await this.usersService.saveUserToDb(user);
       return;
     }

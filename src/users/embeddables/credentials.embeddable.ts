@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-inferrable-types */
 import { Embeddable, Property } from '@mikro-orm/core';
-import * as dayjs from 'dayjs';
+import dayjs from 'dayjs';
 import { ICredentials } from '../interfaces/credentials.interface';
 
 @Embeddable()

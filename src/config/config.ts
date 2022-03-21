@@ -2,7 +2,8 @@ import { LoadStrategy } from '@mikro-orm/core';
 import { IConfig } from './interfaces/config.interface';
 
 export function config(): IConfig {
-  const TESTING = process.env.NODE_ENV !== 'production';
+  const testing = process.env.NODE_ENV !== 'production';
+  const bucketBase = `${process.env.BUCKET_REGION}.${process.env.BUCKET_HOST}.com`;
 
   return {
     port: parseInt(process.env.PORT, 10),
@@ -25,10 +26,6 @@ export function config(): IConfig {
         secret: process.env.JWT_REFRESH_SECRET,
         time: parseInt(process.env.JWT_REFRESH_TIME, 10),
       },
-      wsAccess: {
-        secret: process.env.JWT_ACCESS_SECRET,
-        time: parseInt(process.env.JWT_WS_ACCESS_TIME, 10),
-      },
     },
     emailService: {
       host: process.env.EMAIL_HOST,
@@ -42,13 +39,17 @@ export function config(): IConfig {
     bucketConfig: {
       forcePathStyle: false,
       region: process.env.BUCKET_REGION,
-      endpoint: `https://${process.env.BUCKET_REGION}.linodeobjects.com`,
+      endpoint: `https://${bucketBase}`,
       credentials: {
         accessKeyId: process.env.BUCKET_ACCESS_KEY,
         secretAccessKey: process.env.BUCKET_SECRET_KEY,
       },
     },
-    db: TESTING
+    bucketData: {
+      name: process.env.BUCKET_NAME,
+      url: `https://${process.env.BUCKET_NAME}.${bucketBase}`,
+    },
+    db: testing
       ? {
           type: 'sqlite',
           dbName: 'test.db',
@@ -69,8 +70,8 @@ export function config(): IConfig {
           loadStrategy: LoadStrategy.JOINED,
           allowGlobalContext: true,
         },
-    redis: TESTING
-      ? null
+    redis: testing
+      ? undefined
       : {
           host: process.env.REDIS_HOST,
           port: parseInt(process.env.REDIS_PORT, 10),
@@ -80,7 +81,7 @@ export function config(): IConfig {
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10),
       maxFiles: parseInt(process.env.MAX_FILES, 10),
     },
-    testing: TESTING,
-    likeOperator: TESTING ? '$like' : '$ilike',
+    likeOperator: testing ? '$like' : '$ilike',
+    testing,
   };
 }

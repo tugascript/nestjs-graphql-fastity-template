@@ -8,7 +8,6 @@ export interface IJwt {
   confirmation: ISingleJwt;
   resetPassword: ISingleJwt;
   refresh: ISingleJwt;
-  wsAccess: ISingleJwt;
 }
 
 export type tLikeOperator = '$ilike' | '$like';
