@@ -1,5 +1,6 @@
 import { LoadStrategy } from '@mikro-orm/core';
 import { IConfig } from './interfaces/config.interface';
+import { redisUrlToOptions } from './utils/redis-url-to-options.util';
 
 export function config(): IConfig {
   const testing = process.env.NODE_ENV !== 'production';
@@ -60,22 +61,13 @@ export function config(): IConfig {
         }
       : {
           type: 'postgresql',
-          host: process.env.DB_HOST,
-          port: parseInt(process.env.DB_PORT, 10),
+          clientUrl: process.env.DATABASE_URL,
           entities: ['dist/**/*.entity.js', 'dist/**/*.embeddable.js'],
           entitiesTs: ['src/**/*.entity.ts', 'src/**/*.embeddable.ts'],
-          password: process.env.DB_PASSWORD,
-          user: process.env.DB_USERNAME,
-          dbName: process.env.DB_DATABASE,
           loadStrategy: LoadStrategy.JOINED,
           allowGlobalContext: true,
         },
-    redis: testing
-      ? undefined
-      : {
-          host: process.env.REDIS_HOST,
-          port: parseInt(process.env.REDIS_PORT, 10),
-        },
+    redis: testing ? undefined : redisUrlToOptions(process.env.REDIS_URL),
     ttl: parseInt(process.env.REDIS_CACHE_TTL, 10),
     upload: {
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10),
