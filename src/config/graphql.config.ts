@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
 import { RedisOptions } from 'ioredis';
@@ -14,6 +14,7 @@ import { MercuriusDriverPlugin } from './interfaces/mercurius-driver-plugin.inte
 import { IWsParams } from './interfaces/ws-params.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IGqlCtx } from 'src/common/interfaces/gql-ctx.interface';
+import { GraphQLError } from 'graphql';
 
 @Injectable()
 export class GqlConfigService implements GqlOptionsFactory {
@@ -101,6 +102,16 @@ export class GqlConfigService implements GqlOptionsFactory {
         },
       },
       autoSchemaFile: './schema.gql',
+      errorFormatter: (error) => {
+        const org = error.errors[0].originalError as HttpException;
+        return {
+          statusCode: org.getStatus(),
+          response: {
+            errors: [org.getResponse() as GraphQLError],
+            data: null,
+          },
+        };
+      },
       plugins,
     };
   }

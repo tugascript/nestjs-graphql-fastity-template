@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import {
   Args,
   Mutation,
