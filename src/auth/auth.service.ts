@@ -379,6 +379,11 @@ export class AuthService {
     if (!(await compare(password, user.password)))
       throw new BadRequestException('Wrong password!');
 
+    if (password == password1)
+      throw new BadRequestException(
+        'The new password has to differ from the old one',
+      );
+
     if (password1 !== password2)
       throw new BadRequestException('Passwords do not match');
 
@@ -427,6 +432,11 @@ export class AuthService {
     return [id, sessionId];
   }
 
+  /**
+   * Refresh User Session
+   *
+   * Checks if user session is valid for websocket auth
+   */
   public async refreshUserSession({
     userId,
     sessionId,
@@ -439,8 +449,12 @@ export class AuthService {
 
     if (!session) return false;
 
-    if (dayjs().unix() - session > this.accessTime) {
-      const user = await this.usersService.getUserById(userId);
+    const now = dayjs().unix();
+
+    if (now - session > this.accessTime) {
+      const user = await this.usersService.getUncheckUserById(userId);
+
+      if (!user) return false;
 
       if (user.credentials.version !== sessionData.count) {
         await this.commonService.throwInternalError(
@@ -448,6 +462,9 @@ export class AuthService {
         );
         return false;
       }
+
+      sessionData.sessions[sessionId] = now;
+      await this.saveSessionData(userUuid, sessionData);
     }
 
     return true;
@@ -456,7 +473,7 @@ export class AuthService {
   /**
    * Close User Session
    *
-   * Removes websocket session from cache and db, if its the only
+   * Removes websocket session from cache, if its the only
    * one, makes the user online status offline
    */
   public async closeUserSession({ userId, sessionId }: IWsCtx): Promise<void> {

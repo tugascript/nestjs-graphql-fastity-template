@@ -30,4 +30,6 @@ export const validationSchema = Joi.object({
   AUTH_UUID: Joi.string().required(),
   WS_UUID: Joi.string().required(),
   WS_TIME: Joi.number().required(),
+  THROTTLE_TTL: Joi.number().required(),
+  THROTTLE_LIMIT: Joi.number().required(),
 });

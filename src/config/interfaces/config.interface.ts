@@ -1,5 +1,6 @@
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { MikroOrmModuleOptions } from '@mikro-orm/nestjs';
+import { ThrottlerModuleOptions } from '@nestjs/throttler';
 import { UploadOptions } from 'graphql-upload';
 import { RedisOptions } from 'ioredis';
 import { IBucketData } from './bucket-data.inteface';
@@ -21,4 +22,5 @@ export interface IConfig {
   testing: boolean;
   likeOperator: tLikeOperator;
   sessionTime: number;
+  throttler: ThrottlerModuleOptions;
 }

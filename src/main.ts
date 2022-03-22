@@ -8,6 +8,7 @@ import {
 import fastifyCookie from 'fastify-cookie';
 import fastifyCors from 'fastify-cors';
 import fastifyStatic from 'fastify-static';
+import fastifyCsrf from 'fastify-csrf';
 import { UploadOptions } from 'graphql-upload';
 import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
@@ -27,6 +28,7 @@ async function bootstrap() {
   app.register(fastifyCookie, {
     secret: configService.get<string>('COOKIE_SECRET'),
   });
+  app.register(fastifyCsrf, { cookieOpts: { signed: true } });
   app.register(mercuriusUpload, configService.get<UploadOptions>('upload'));
   app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),

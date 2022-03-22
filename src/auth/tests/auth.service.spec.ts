@@ -27,10 +27,11 @@ import {
   ITokenPayloadResponse,
 } from '../interfaces/token-payload.interface';
 import { ResponseMock } from './response.mock.spec';
+import { faker } from '@faker-js/faker';
 
-const NAME = 'John Doe';
-const EMAIL = 'johndoe@yahoo.com';
-const NEW_EMAIL = 'johndoethesecond@yahoo.com';
+const NAME = faker.name.findName();
+const EMAIL = faker.internet.email();
+const NEW_EMAIL = faker.internet.email();
 const PASSWORD = 'Ab123456';
 const NEW_PASSWORD = 'Ab1234567';
 describe('AuthService', () => {
@@ -252,6 +253,112 @@ describe('AuthService', () => {
       const { id } = await verifyAuthToken(auth2.accessToken, 'access');
       expect(userId).toBe(id);
     });
+  });
+
+  describe('Password Reseting', () => {
+    let resetToken: string;
+    it('sendResetPasswordEmail && resetPassword', async () => {
+      let user = await usersService.getUncheckUser(NEW_EMAIL);
+      expect(user).toBeNull();
+      const message1 = await authService.sendResetPasswordEmail({
+        email: NEW_EMAIL,
+      });
+      expect(message1).toBeInstanceOf(LocalMessageType);
+      expect(message1.message).toBe('Password reset email sent');
+
+      jest
+        .spyOn(authService, 'sendResetPasswordEmail')
+        .mockImplementation(async ({ email }) => {
+          const user = await usersService.getUncheckUser(email);
+
+          if (user) {
+            resetToken = await generateAuthToken(
+              { id: user.id, count: user.credentials.version },
+              'resetPassword',
+            );
+            return new LocalMessageType(resetToken);
+          }
+
+          return new LocalMessageType('Password reset email sent');
+        });
+
+      const message2 = await authService.sendResetPasswordEmail({
+        email: EMAIL,
+      });
+      expect(message2).toBeInstanceOf(LocalMessageType);
+      expect(message2.message).toBe(resetToken);
+
+      user = await usersService.getUserById(userId);
+      const count = user.credentials.version;
+      await expect(
+        authService.resetPassword({
+          resetToken: 'asdadasd',
+          password1: NEW_PASSWORD,
+          password2: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError();
+      await expect(
+        authService.resetPassword({
+          resetToken,
+          password1: PASSWORD,
+          password2: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError();
+
+      const message = await authService.resetPassword({
+        resetToken,
+        password1: NEW_PASSWORD,
+        password2: NEW_PASSWORD,
+      });
+      expect(message).toBeInstanceOf(LocalMessageType);
+      expect(message.message).toBe('Password reseted successfully');
+
+      const { id } = await verifyAuthToken(resetToken, 'resetPassword');
+      user = await usersService.getUserById(id);
+      expect(user.credentials.version).toBeGreaterThan(count);
+    });
+  });
+
+  describe('Update Auth Credentials', () => {
+    it('updatePassword', async () => {
+      let user = await usersService.getUserById(userId);
+      const count = user.credentials.version;
+
+      await expect(
+        authService.updatePassword(response as any, userId, {
+          password: PASSWORD,
+          password1: NEW_PASSWORD,
+          password2: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError('Wrong password!');
+      await expect(
+        authService.updatePassword(response as any, userId, {
+          password: NEW_PASSWORD,
+          password1: NEW_PASSWORD,
+          password2: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError('The new password has to differ from the old one');
+      await expect(
+        authService.updatePassword(response as any, userId, {
+          password: NEW_PASSWORD,
+          password1: PASSWORD,
+          password2: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError('Passwords do not match');
+
+      const auth = await authService.updatePassword(response as any, userId, {
+        password: NEW_PASSWORD,
+        password1: PASSWORD,
+        password2: PASSWORD,
+      });
+      expect(auth.accessToken).toBeDefined();
+
+      const { id } = await verifyAuthToken(auth.accessToken, 'access');
+      user = await usersService.getUserById(id);
+      expect(user.credentials.version).toBeGreaterThan(count);
+    });
+
+    it('updateEmail', async () => {});
   });
 
   it('should be defined', () => {

@@ -9,7 +9,7 @@ import { CommonModule } from './common/common.module';
 import { CacheConfig } from './config/cache.config';
 import { config } from './config/config';
 import { GqlConfigService } from './config/graphql.config';
-import { GraphQLDriver } from './config/graphql.driver';
+import { GraphQLDriver } from './config/utils/graphql.driver';
 import { MikroOrmConfig } from './config/mikroorm.config';
 import { validationSchema } from './config/validation';
 import { EmailModule } from './email/email.module';

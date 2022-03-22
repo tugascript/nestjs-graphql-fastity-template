@@ -75,6 +75,10 @@ export function config(): IConfig {
     },
     sessionTime: parseInt(process.env.WS_TIME, 10),
     likeOperator: testing ? '$like' : '$ilike',
+    throttler: {
+      ttl: parseInt(process.env.THROTTLE_TTL, 10),
+      limit: parseInt(process.env.THROTTLE_LIMIT, 10),
+    },
     testing,
   };
 }

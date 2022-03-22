@@ -23,7 +23,8 @@
     "migrate:update": "npx mikro-orm schema:update --run"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.54.1",
+    "@aws-sdk/client-s3": "^3.55.0",
+    "@aws-sdk/signature-v4-crt": "^3.55.0",
     "@mikro-orm/core": "^5.1.1",
     "@mikro-orm/nestjs": "^5.0.1",
     "@mikro-orm/postgresql": "^5.1.1",
@@ -31,9 +32,11 @@
     "@nestjs/common": "^8.4.2",
     "@nestjs/config": "^2.0.0",
     "@nestjs/core": "^8.4.2",
-    "@nestjs/graphql": "^10.0.7",
-    "@nestjs/mercurius": "^10.0.7",
+    "@nestjs/graphql": "^10.0.8",
+    "@nestjs/mercurius": "^10.0.8",
     "@nestjs/platform-fastify": "^8.4.2",
+    "@nestjs/throttler": "^2.0.1",
+    "add": "^2.0.6",
     "altair-fastify-plugin": "^4.4.1",
     "bcrypt": "^5.0.1",
     "cache-manager": "^3.6.0",
@@ -44,6 +47,7 @@
     "fastify": "^3.27.4",
     "fastify-cookie": "^5.6.0",
     "fastify-cors": "^6.0.3",
+    "fastify-csrf": "^3.1.0",
     "fastify-static": "^4.6.1",
     "graphql": "^16.3.0",
     "graphql-upload": "^13.0.0",
@@ -55,13 +59,15 @@
     "mercurius-cache": "^1.7.0",
     "mercurius-upload": "^3.0.1",
     "mqemitter-redis": "^4.2.0",
+    "nestjs-throttler-storage-redis": "^0.1.18",
     "nodemailer": "^6.7.3",
     "reflect-metadata": "^0.1.13",
     "rimraf": "^3.0.2",
     "rxjs": "^7.5.5",
     "sharp": "^0.30.3",
     "slugify": "^1.6.5",
-    "uuid": "^8.3.2"
+    "uuid": "^8.3.2",
+    "yarn": "^1.22.18"
   },
   "devDependencies": {
     "@faker-js/faker": "^6.0.0",
@@ -75,13 +81,13 @@
     "@types/graphql-upload": "^8.0.11",
     "@types/jest": "27.4.1",
     "@types/jsonwebtoken": "^8.5.8",
-    "@types/node": "^17.0.21",
+    "@types/node": "^17.0.22",
     "@types/nodemailer": "^6.4.4",
     "@types/sharp": "^0.30.0",
-    "@types/supertest": "^2.0.11",
+    "@types/supertest": "^2.0.12",
     "@types/uuid": "^8.3.4",
-    "@typescript-eslint/eslint-plugin": "^5.15.0",
-    "@typescript-eslint/parser": "^5.15.0",
+    "@typescript-eslint/eslint-plugin": "^5.16.0",
+    "@typescript-eslint/parser": "^5.16.0",
     "eslint": "^8.11.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
@@ -93,7 +99,8 @@
     "ts-loader": "^9.2.8",
     "ts-node": "^10.7.0",
     "tsconfig-paths": "^3.14.0",
-    "typescript": "^4.6.2"
+    "typescript": "^4.6.2",
+    "webpack": "^5.70.0"
   },
   "jest": {
     "moduleFileExtensions": [

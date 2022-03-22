@@ -2,8 +2,8 @@ import { MercuriusDriver } from '@nestjs/mercurius';
 import { FastifyInstance } from 'fastify';
 import { printSchema } from 'graphql';
 import mercurius from 'mercurius';
-import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
-import { addPlugins } from './utils/add-plugins.util';
+import { MercuriusExtendedDriverConfig } from '../interfaces/mercurius-extended-driver-config.interface';
+import { addPlugins } from './add-plugins.util';
 
 export class GraphQLDriver extends MercuriusDriver {
   constructor() {

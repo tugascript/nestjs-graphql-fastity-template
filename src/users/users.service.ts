@@ -191,6 +191,18 @@ export class UsersService {
   }
 
   /**
+   * Get Uncheck User by ID
+   *
+   * Gets a user by id and does not check if it exists
+   */
+  public async getUncheckUserById(
+    id: number,
+  ): Promise<UserEntity | undefined | null> {
+    const user = await this.usersRepository.findOne({ id });
+    return user;
+  }
+
+  /**
    * Get User By Payload
    *
    * Gets user by jwt payload for auth
