@@ -4,7 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import { v5 } from 'uuid';
+import { v5, v4 } from 'uuid';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
 import { LocalMessageType } from '../../common/gql-types/message.type';
@@ -26,8 +26,25 @@ import {
   ITokenPayload,
   ITokenPayloadResponse,
 } from '../interfaces/token-payload.interface';
-import { ResponseMock } from './response.mock.spec';
 import { faker } from '@faker-js/faker';
+import { ISessionsData } from '../interfaces/sessions-data.interface';
+import dayjs from 'dayjs';
+
+class ResponseMock {
+  public cookies = '';
+  public options: any;
+
+  public cookie(name: string, token: string, options?: any) {
+    this.cookies = `${name}=${token}`;
+    if (options) this.options = options;
+  }
+
+  public clearCookie(name: string) {
+    if (this.cookies.split('=')[0] === name) {
+      this.cookies = '';
+    }
+  }
+}
 
 const NAME = faker.name.findName();
 const EMAIL = faker.internet.email();
@@ -330,7 +347,7 @@ describe('AuthService', () => {
           password1: NEW_PASSWORD,
           password2: NEW_PASSWORD,
         }),
-      ).rejects.toThrowError('Wrong password!');
+      ).rejects.toThrowError('Wrong password');
       await expect(
         authService.updatePassword(response as any, userId, {
           password: NEW_PASSWORD,
@@ -358,14 +375,136 @@ describe('AuthService', () => {
       expect(user.credentials.version).toBeGreaterThan(count);
     });
 
-    it('updateEmail', async () => {});
-  });
+    it('updateEmail', async () => {
+      let user = await usersService.getUserById(userId);
+      const count = user.credentials.version;
+      await expect(
+        authService.updateEmail(response as any, userId, {
+          email: NEW_EMAIL,
+          password: NEW_PASSWORD,
+        }),
+      ).rejects.toThrowError('Wrong password');
+      await expect(
+        authService.updateEmail(response as any, userId, {
+          email: EMAIL,
+          password: PASSWORD,
+        }),
+      ).rejects.toThrowError('The new email has to differ from the old one');
 
-  it('should be defined', () => {
-    expect(authService).toBeDefined();
-    expect(usersService).toBeDefined();
-    expect(configService).toBeDefined();
-    expect(commonService).toBeDefined();
-    expect(cacheManager).toBeDefined();
+      const auth = await authService.updateEmail(response as any, userId, {
+        email: NEW_EMAIL,
+        password: PASSWORD,
+      });
+
+      const { id } = await verifyAuthToken(auth.accessToken, 'access');
+      user = await usersService.getUserById(id);
+      expect(user.credentials.version).toBeGreaterThan(count);
+    });
+
+    describe('WS Auth', () => {
+      it('generateWsSession', async () => {
+        await expect(
+          authService.generateWsSession('asdasd'),
+        ).rejects.toThrowError();
+
+        const token = await generateAuthToken({ id: userId }, 'access');
+        const [id, sessionId] = await authService.generateWsSession(token);
+
+        expect(id).toBe(userId);
+        expect(sessionId).toBeDefined();
+      });
+
+      it('refreshUserSession', async () => {
+        jest
+          .spyOn(authService, 'generateWsSession')
+          .mockImplementationOnce(async (accessToken) => {
+            const { id } = await verifyAuthToken(accessToken, 'access');
+            const user = await usersService.getUserById(id);
+            const userUuid = v5(
+              user.id.toString(),
+              configService.get<string>('WS_UUID'),
+            );
+            const count = user.credentials.version;
+            let sessionData = await commonService.throwInternalError(
+              cacheManager.get<ISessionsData>(userUuid),
+            );
+
+            if (!sessionData || sessionData.count != count) {
+              sessionData = {
+                sessions: {},
+                count,
+              };
+              user.onlineStatus = user.defaultStatus;
+            }
+
+            const sessionId = v4();
+            sessionData.sessions[sessionId] = dayjs()
+              .subtract(
+                configService.get<number>('jwt.access.time') + 1,
+                'second',
+              )
+              .unix();
+            await commonService.throwInternalError(
+              cacheManager.set<ISessionsData>(userUuid, sessionData, {
+                ttl: configService.get<number>('sessionTime'),
+              }),
+            );
+
+            return [id, sessionId];
+          });
+
+        const token = await generateAuthToken({ id: userId }, 'access');
+        const [id, sessionId] = await authService.generateWsSession(token);
+
+        expect(id).toBe(userId);
+        expect(sessionId).toBeDefined();
+        expect(
+          await authService.refreshUserSession({ userId, sessionId }),
+        ).toBe(true);
+
+        await authService.updateEmail(response as any, userId, {
+          email: EMAIL,
+          password: PASSWORD,
+        });
+
+        setTimeout(
+          async () =>
+            expect(
+              await authService.refreshUserSession({ userId, sessionId }),
+            ).toBe(false),
+          150,
+        );
+      });
+
+      it('closeUserSession', async () => {
+        const token = await generateAuthToken({ id: userId }, 'access');
+        const [id, sessionId] = await authService.generateWsSession(token);
+        expect(id).toBe(userId);
+        expect(sessionId).toBeDefined();
+
+        const [id2, sessionId2] = await authService.generateWsSession(token);
+        expect(id2).toBe(userId);
+        expect(sessionId2).toBeDefined();
+
+        await authService.closeUserSession({ userId, sessionId });
+        const userUuid = v5(
+          userId.toString(),
+          configService.get<string>('WS_UUID'),
+        );
+
+        expect(await cacheManager.get(userUuid)).toBeDefined();
+
+        await authService.closeUserSession({ userId, sessionId: sessionId2 });
+        expect(await cacheManager.get(userUuid)).toBeUndefined();
+      });
+    });
+
+    it('should be defined', () => {
+      expect(authService).toBeDefined();
+      expect(usersService).toBeDefined();
+      expect(configService).toBeDefined();
+      expect(commonService).toBeDefined();
+      expect(cacheManager).toBeDefined();
+    });
   });
 });

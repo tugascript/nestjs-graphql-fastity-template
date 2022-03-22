@@ -5,8 +5,7 @@ import { CacheModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { hash } from 'bcrypt';
-import { RegisterInput } from '../../auth/dtos/register.dto';
-import { ResponseMock } from '../../auth/tests/response.mock.spec';
+import { RegisterDto } from '../../auth/dtos/register.dto';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
 import { QueryOrderEnum } from '../../common/enums/query-order.enum';
@@ -18,6 +17,22 @@ import { UploaderModule } from '../../uploader/uploader.module';
 import { UsersService } from '../../users/users.service';
 import { UserEntity } from '../entities/user.entity';
 import { UsersCursorEnum } from '../enums/users-cursor.enum';
+
+class ResponseMock {
+  public cookies = '';
+  public options: any;
+
+  public cookie(name: string, token: string, options?: any) {
+    this.cookies = `${name}=${token}`;
+    if (options) this.options = options;
+  }
+
+  public clearCookie(name: string) {
+    if (this.cookies.split('=')[0] === name) {
+      this.cookies = '';
+    }
+  }
+}
 
 const PASSWORD = 'Ab123456';
 
@@ -68,7 +83,7 @@ describe('UsersService', () => {
         name,
         email,
         password1,
-      }: RegisterInput) => {
+      }: RegisterDto) => {
         const user = usersRepository.create({
           name,
           email,

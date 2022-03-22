@@ -60,8 +60,7 @@ export class AuthService {
     this.configService.get<number>('jwt.refresh.time');
   private readonly accessTime =
     this.configService.get<number>('jwt.access.time');
-  private readonly sessionTime =
-    this.configService.get<number>('jwt.sessionTime');
+  private readonly sessionTime = this.configService.get<number>('sessionTime');
 
   //____________________ MUTATIONS ____________________
 
@@ -352,10 +351,14 @@ export class AuthService {
     const user = await this.usersService.getUserById(userId);
 
     if (!(await compare(password, user.password)))
-      throw new BadRequestException('Wrong password!');
+      throw new BadRequestException('Wrong password');
 
+    if (email === user.email)
+      throw new BadRequestException(
+        'The new email has to differ from the old one',
+      );
     user.email = email;
-    user.credentials.version++;
+    user.credentials.updateVersion();
     await this.usersService.saveUserToDb(user);
 
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
@@ -377,7 +380,7 @@ export class AuthService {
     const user = await this.usersService.getUserById(userId);
 
     if (!(await compare(password, user.password)))
-      throw new BadRequestException('Wrong password!');
+      throw new BadRequestException('Wrong password');
 
     if (password == password1)
       throw new BadRequestException(
@@ -445,6 +448,9 @@ export class AuthService {
     const sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionsData>(userUuid),
     );
+
+    if (!sessionData) return false;
+
     const session = sessionData.sessions[sessionId];
 
     if (!session) return false;
@@ -453,7 +459,6 @@ export class AuthService {
 
     if (now - session > this.accessTime) {
       const user = await this.usersService.getUncheckUserById(userId);
-
       if (!user) return false;
 
       if (user.credentials.version !== sessionData.count) {
