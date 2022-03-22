@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { AuthService } from './auth.service';
@@ -12,8 +12,10 @@ import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { ResetEmailDto } from './dtos/reset-email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { FastifyThrottlerGuard } from './guards/fastify-throttler.guard';
 
 @Controller('api/auth')
+@UseGuards(FastifyThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

@@ -3,19 +3,19 @@ import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
+import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { CommonModule } from './common/common.module';
 import { CacheConfig } from './config/cache.config';
 import { config } from './config/config';
 import { GqlConfigService } from './config/graphql.config';
-import { GraphQLDriver } from './config/utils/graphql.driver';
 import { MikroOrmConfig } from './config/mikroorm.config';
+import { GraphQLDriver } from './config/utils/graphql.driver';
 import { validationSchema } from './config/validation';
 import { EmailModule } from './email/email.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
-import { AppController } from './app.controller';
 
 @Module({
   imports: [

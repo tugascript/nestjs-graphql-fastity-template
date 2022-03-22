@@ -255,10 +255,15 @@ export class UsersService {
 
     const qb = this.usersRepository.createQueryBuilder(name).where({
       confirmed: true,
-      name: {
-        [this.likeOperator]: this.commonService.formatSearch(search),
-      },
     });
+
+    if (search) {
+      qb.andWhere({
+        name: {
+          [this.likeOperator]: this.commonService.formatSearch(search),
+        },
+      });
+    }
 
     return await this.commonService.queryBuilderPagination(
       name,

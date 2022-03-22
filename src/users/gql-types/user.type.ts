@@ -19,7 +19,7 @@ export class UserType extends LocalBaseType implements IUser {
   public picture?: string;
 
   @Field(() => OnlineStatusEnum)
-  public onlineStatus: OnlineStatusEnum = OnlineStatusEnum.OFFLINE;
+  public onlineStatus: OnlineStatusEnum;
 
   @Field(() => String)
   public lastOnline: Date;

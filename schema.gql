@@ -47,7 +47,7 @@ type PaginatedUsers {
 type Query {
   me: User!
   getUser(username: String!): User!
-  findUsers(after: String, first: Int = 10, search: String!, cursor: UsersCursor = DATE, order: QueryOrder = DESC): PaginatedUsers!
+  findUsers(after: String, first: Int = 10, search: String, cursor: UsersCursor = DATE, order: QueryOrder = DESC): PaginatedUsers!
 }
 
 enum UsersCursor {

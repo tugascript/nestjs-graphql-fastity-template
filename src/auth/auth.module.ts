@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { ThrottlerConfig } from '../config/throttler.config';
 import { EmailModule } from '../email/email.module';
 import { UsersModule } from '../users/users.module';
@@ -12,19 +11,12 @@ import { AuthService } from './auth.service';
   imports: [
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
-      inject: [ConfigService],
       useClass: ThrottlerConfig,
     }),
     UsersModule,
     EmailModule,
   ],
-  providers: [
-    AuthService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
-  ],
+  providers: [AuthService],
   controllers: [AuthController],
   exports: [AuthService],
 })
