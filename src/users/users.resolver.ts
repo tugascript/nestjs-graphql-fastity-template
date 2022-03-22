@@ -1,12 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
-import {
-  Args,
-  Mutation,
-  Parent,
-  Query,
-  ResolveField,
-  Resolver,
-} from '@nestjs/graphql';
+import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { GetRes } from '../auth/decorators/get-res.decorator';
@@ -18,7 +10,6 @@ import { GetUsersDto } from './dtos/get-users.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
-import { OnlineStatusEnum } from './enums/online-status.enum';
 import { PaginatedUsersType } from './gql-types/paginated-users.type';
 import { UserType } from './gql-types/user.type';
 import { UsersService } from './users.service';
@@ -81,14 +72,5 @@ export class UsersResolver {
     @Args() dto: GetUsersDto,
   ): Promise<IPaginated<UserEntity>> {
     return this.usersService.findUsers(dto);
-  }
-
-  //____________________ Field Resolvers ____________________
-
-  @ResolveField('onlineStatus', () => OnlineStatusEnum)
-  public async getOnlineState(
-    @Parent() user: UserEntity,
-  ): Promise<OnlineStatusEnum> {
-    return this.usersService.getUserOnlineStatus(user.id);
   }
 }

@@ -1,5 +1,6 @@
-export interface ITokenPayload {
-  id: number;
+import { IAccessPayload } from './access-payload.interface';
+
+export interface ITokenPayload extends IAccessPayload {
   count: number;
 }
 

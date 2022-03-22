@@ -13,16 +13,33 @@ export class AuthGuard implements CanActivate {
     private readonly authService: AuthService,
   ) {}
 
-  public async canActivate(context: ExecutionContext) {
+  public async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    const request = this.getRequest(context);
 
-    if (request === true) return request;
+    if (context.getType() === 'http') {
+      return await this.setHttpHeader(
+        context.switchToHttp().getRequest(),
+        isPublic,
+      );
+    }
 
-    const auth = request?.headers?.authorization;
+    const gqlCtx: IGqlCtx = GqlExecutionContext.create(context).getContext();
+
+    if (gqlCtx.ws) {
+      return await this.authService.refreshUserSession(gqlCtx.ws);
+    }
+
+    return await this.setHttpHeader(gqlCtx.reply.request, isPublic);
+  }
+
+  private async setHttpHeader(
+    req: IExtendedRequest,
+    isPublic: boolean,
+  ): Promise<boolean> {
+    const auth = req.headers?.authorization;
 
     if (!auth) return isPublic;
 
@@ -32,23 +49,10 @@ export class AuthGuard implements CanActivate {
 
     try {
       const { id } = await this.authService.verifyAuthToken(arr[1], 'access');
-      request.user = id;
+      req.user = id;
       return true;
-    } catch (error) {
+    } catch (_) {
       return isPublic;
     }
-  }
-
-  // // For the public REST routes
-  private getRequest(context: ExecutionContext): IExtendedRequest | true {
-    if (context.getType() === 'http') {
-      return context.switchToHttp().getRequest();
-    }
-
-    const gqlCtx: IGqlCtx = GqlExecutionContext.create(context).getContext();
-
-    if (gqlCtx.user) return true;
-
-    return gqlCtx.reply.request as unknown as IExtendedRequest;
   }
 }

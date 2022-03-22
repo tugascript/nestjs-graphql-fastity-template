@@ -13,7 +13,7 @@ import { Cache } from 'cache-manager';
 import { Response } from 'express';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { RegisterDto } from '../auth/dtos/register.dto';
-import { ISessionData } from '../auth/interfaces/session-data.interface';
+import { ISessionsData } from '../auth/interfaces/sessions-data.interface';
 import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/gql-types/message.type';
@@ -24,7 +24,6 @@ import { GetUsersDto } from './dtos/get-users.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
-import { OnlineStatusEnum } from './enums/online-status.enum';
 import { getUserCursor } from './enums/users-cursor.enum';
 
 @Injectable()
@@ -122,14 +121,13 @@ export class UsersService {
 
     const userUuid = uuidV5(userId.toString(), this.wsNamespace);
     const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionData>(userUuid),
+      this.cacheManager.get<ISessionsData>(userUuid),
     );
 
     if (sessionData) {
-      sessionData.status = defaultStatus;
       user.onlineStatus = defaultStatus;
       await this.commonService.throwInternalError(
-        this.cacheManager.set<ISessionData>(userUuid, sessionData, {
+        this.cacheManager.set<ISessionsData>(userUuid, sessionData, {
           ttl: this.wsAccessTime,
         }),
       );
@@ -258,21 +256,6 @@ export class UsersService {
       qb,
       after,
     );
-  }
-
-  /**
-   * Get User Online Status
-   *
-   * Gets user online status from cache
-   */
-  public async getUserOnlineStatus(userId: number) {
-    const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionData>(
-        uuidV5(userId.toString(), this.wsNamespace),
-      ),
-    );
-
-    return sessionData ? sessionData.status : OnlineStatusEnum.OFFLINE;
   }
 
   //____________________ OTHER ____________________

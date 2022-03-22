@@ -5,10 +5,11 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import cookieParser from 'fastify-cookie';
+import fastifyCookie from 'fastify-cookie';
+import fastifyCors from 'fastify-cors';
 import fastifyStatic from 'fastify-static';
 import { UploadOptions } from 'graphql-upload';
-import MercuriusGQLUpload from 'mercurius-upload';
+import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
@@ -18,20 +19,23 @@ async function bootstrap() {
     new FastifyAdapter(),
   );
   const configService = app.get(ConfigService);
-  app.enableCors({
+  const testing = configService.get<boolean>('testing');
+  app.register(fastifyCors, {
     credentials: true,
     origin: configService.get<string>('url'),
   });
-  app.register(cookieParser);
-  app.register(MercuriusGQLUpload, configService.get<UploadOptions>('upload'));
+  app.register(fastifyCookie, {
+    secret: configService.get<string>('COOKIE_SECRET'),
+  });
+  app.register(mercuriusUpload, configService.get<UploadOptions>('upload'));
   app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),
-    decorateReply: false,
+    decorateReply: !testing,
   });
   app.useGlobalPipes(new ValidationPipe());
   await app.listen(
     configService.get<number>('port'),
-    configService.get<boolean>('testing') ? '127.0.0.1' : '0.0.0.0', // because of nginx
+    testing ? '127.0.0.1' : '0.0.0.0', // because of nginx
   );
 }
 bootstrap();

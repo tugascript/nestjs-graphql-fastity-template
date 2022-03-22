@@ -73,6 +73,7 @@ export function config(): IConfig {
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10),
       maxFiles: parseInt(process.env.MAX_FILES, 10),
     },
+    sessionTime: parseInt(process.env.WS_TIME, 10),
     likeOperator: testing ? '$like' : '$ilike',
     testing,
   };

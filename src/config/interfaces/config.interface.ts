@@ -20,4 +20,5 @@ export interface IConfig {
   upload: UploadOptions;
   testing: boolean;
   likeOperator: tLikeOperator;
+  sessionTime: number;
 }
