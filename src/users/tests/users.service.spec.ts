@@ -18,22 +18,6 @@ import { UsersService } from '../../users/users.service';
 import { UserEntity } from '../entities/user.entity';
 import { UsersCursorEnum } from '../enums/users-cursor.enum';
 
-class ResponseMock {
-  public cookies = '';
-  public options: any;
-
-  public cookie(name: string, token: string, options?: any) {
-    this.cookies = `${name}=${token}`;
-    if (options) this.options = options;
-  }
-
-  public clearCookie(name: string) {
-    if (this.cookies.split('=')[0] === name) {
-      this.cookies = '';
-    }
-  }
-}
-
 const PASSWORD = 'Ab123456';
 
 describe('UsersService', () => {
@@ -129,12 +113,7 @@ describe('UsersService', () => {
 
   describe('deleteUser', () => {
     it('should delete a user and return a local message', async () => {
-      const res = new ResponseMock();
-      const message = await usersService.deleteUser(
-        res as any,
-        idToDelete ?? 1,
-        PASSWORD,
-      );
+      const message = await usersService.deleteUser(idToDelete ?? 1, PASSWORD);
 
       expect(message).toBeInstanceOf(LocalMessageType);
       expect(message.message).toBe('Account deleted successfully');

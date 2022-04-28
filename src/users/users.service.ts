@@ -10,7 +10,6 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import { Response } from 'express';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { RegisterDto } from '../auth/dtos/register.dto';
 import { ISessionsData } from '../auth/interfaces/sessions-data.interface';
@@ -143,7 +142,6 @@ export class UsersService {
    * Deletes current user account
    */
   public async deleteUser(
-    res: Response,
     userId: number,
     password: string,
   ): Promise<LocalMessageType> {
@@ -151,8 +149,6 @@ export class UsersService {
 
     if (password.length > 1 && !(await compare(password, user.password)))
       throw new BadRequestException('Wrong password!');
-
-    res.clearCookie(this.cookieName);
 
     try {
       await this.cacheManager.del(uuidV5(userId.toString(), this.wsNamespace));

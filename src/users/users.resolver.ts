@@ -1,7 +1,5 @@
 import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Response } from 'express';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { GetRes } from '../auth/decorators/get-res.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { IPaginated } from '../common/interfaces/paginated.interface';
@@ -38,11 +36,10 @@ export class UsersResolver {
 
   @Mutation(() => LocalMessageType)
   public async deleteAccount(
-    @GetRes() res: Response,
     @CurrentUser() userId: number,
     @Args('password') password: string,
   ): Promise<LocalMessageType> {
-    return this.usersService.deleteUser(res, userId, password);
+    return this.usersService.deleteUser(userId, password);
   }
 
   //____________________ QUERIES ____________________

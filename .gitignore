@@ -42,3 +42,12 @@ test.db
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+### Yarn
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
