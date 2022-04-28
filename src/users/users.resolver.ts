@@ -1,7 +1,12 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { Response } from 'express';
+import {
+  Args,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { GetRes } from '../auth/decorators/get-res.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { IPaginated } from '../common/interfaces/paginated.interface';
@@ -38,11 +43,10 @@ export class UsersResolver {
 
   @Mutation(() => LocalMessageType)
   public async deleteAccount(
-    @GetRes() res: Response,
     @CurrentUser() userId: number,
     @Args('password') password: string,
   ): Promise<LocalMessageType> {
-    return this.usersService.deleteUser(res, userId, password);
+    return this.usersService.deleteUser(userId, password);
   }
 
   //____________________ QUERIES ____________________
@@ -72,5 +76,15 @@ export class UsersResolver {
     @Args() dto: GetUsersDto,
   ): Promise<IPaginated<UserEntity>> {
     return this.usersService.findUsers(dto);
+  }
+
+  //____________________ RESOLVE FIELDS ____________________
+
+  @ResolveField('email', () => String, { nullable: true })
+  public getEmail(
+    @Parent() user: UserEntity,
+    @CurrentUser() userId: number,
+  ): string | null {
+    return user.id === userId ? user.email : null;
   }
 }

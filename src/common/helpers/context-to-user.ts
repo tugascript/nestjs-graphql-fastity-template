@@ -1,3 +1,5 @@
-export const contextToUser = (ctx: Record<string, any>): number => {
-  return ctx.user.reply.request.user;
+import { IGqlCtx } from '../interfaces/gql-ctx.interface';
+
+export const contextToUser = (ctx: IGqlCtx): number => {
+  return ctx.ws.userId ?? (ctx.reply.request as any).user;
 };

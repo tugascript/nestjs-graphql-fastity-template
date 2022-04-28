@@ -1,11 +1,14 @@
 version: '3.7'
 services:
   redis:
+    container_name: redis
     image: 'redis:alpine'
+    command: redis-server --requirepass password
     ports:
       - '6379:6379'
 
   redis-commander:
+    container_name: redis-comander
     image: rediscommander/redis-commander:latest
     environment:
       - REDIS_HOSTS=local:redis:6379
@@ -19,24 +22,10 @@ services:
     image: postgres:latest
     ports:
       - '5432:5432'
-    volumes:
-      - /data/postgres:/data/postgres
-    env_file:
-      - docker.env
-    networks:
-      - postgres
-
-  pgadmin:
-    links:
-      - postgres:postgres
-    container_name: pgadmin
-    image: dpage/pgadmin4
-    ports:
-      - '8080:80'
-    volumes:
-      - /data/pgadmin:/root/.pgadmin
-    env_file:
-      - docker.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: general
     networks:
       - postgres
 

@@ -5,9 +5,9 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import fastifyCookie from 'fastify-cookie';
-import fastifyCors from 'fastify-cors';
-import fastifyStatic from 'fastify-static';
+import fastifyCookie from '@fastify/cookie';
+import fastifyCors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import fastifyCsrf from 'fastify-csrf';
 import { UploadOptions } from 'graphql-upload';
 import mercuriusUpload from 'mercurius-upload';

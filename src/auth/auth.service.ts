@@ -123,10 +123,7 @@ export class AuthService {
 
     if (!(await compare(password, currentPassword))) {
       // To check for passwords changes, based on facebook auth
-      if (
-        lastPassword.length > 0 &&
-        !(await compare(lastPassword, currentPassword))
-      ) {
+      if (lastPassword.length > 0 && !(await compare(lastPassword, password))) {
         let message = 'You changed your password ';
 
         if (months > 0) {
@@ -266,7 +263,13 @@ export class AuthService {
       value,
       'refresh',
     )) as ITokenPayloadResponse;
-    const user = await this.usersService.getUserByPayload(payload);
+    const user = await this.usersService.getUncheckUserById(payload.id);
+
+    if (user.credentials.version !== payload.count) {
+      this.logoutUser(res);
+      throw new UnauthorizedException('Token is invalid or expired');
+    }
+
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
 
