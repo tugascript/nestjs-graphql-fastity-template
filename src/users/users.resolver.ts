@@ -1,4 +1,11 @@
-import { Args, Mutation, Query, Resolver } from '@nestjs/graphql';
+import {
+  Args,
+  Mutation,
+  Parent,
+  Query,
+  ResolveField,
+  Resolver,
+} from '@nestjs/graphql';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { LocalMessageType } from '../common/gql-types/message.type';
@@ -69,5 +76,15 @@ export class UsersResolver {
     @Args() dto: GetUsersDto,
   ): Promise<IPaginated<UserEntity>> {
     return this.usersService.findUsers(dto);
+  }
+
+  //____________________ RESOLVE FIELDS ____________________
+
+  @ResolveField('email', () => String, { nullable: true })
+  public getEmail(
+    @Parent() user: UserEntity,
+    @CurrentUser() userId: number,
+  ): string | null {
+    return user.id === userId ? user.email : null;
   }
 }
