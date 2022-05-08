@@ -290,7 +290,7 @@ export class CommonService {
    * Takes a string and generates a slug with dots as word separators
    */
   public generatePointSlug(str: string): string {
-    return slugify(str, { lower: true, replacement: '.' });
+    return slugify(str, { lower: true, replacement: '.', remove: /['_\.]/g });
   }
 
   /**
@@ -299,7 +299,10 @@ export class CommonService {
    * Takes a string and generates a slug with a unique identifier at the end
    */
   public generateSlug(str: string): string {
-    return slugify(`${str} ${uuidV4().substring(0, 6)}`, { lower: true });
+    return slugify(`${str} ${uuidV4().substring(0, 6)}`, {
+      lower: true,
+      remove: /['_\.]/g,
+    });
   }
 
   //-------------------- Entity Validations --------------------
