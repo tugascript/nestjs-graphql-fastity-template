@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { IExtendedContext } from 'src/common/interfaces/extended-context.interface';
+import { IGqlCtx } from 'src/common/interfaces/gql-ctx.interface';
 import { IExtendedRequest } from '../interfaces/extended-request.interface';
 
 export const CurrentUser = createParamDecorator(
@@ -9,8 +9,9 @@ export const CurrentUser = createParamDecorator(
       return context.switchToHttp().getRequest()?.user;
     }
 
-    const gqlCtx: IExtendedContext =
-      GqlExecutionContext.create(context).getContext();
-    return (gqlCtx.reply.request as IExtendedRequest).user ?? gqlCtx.user;
+    const gqlCtx: IGqlCtx = GqlExecutionContext.create(context).getContext();
+    return (
+      (gqlCtx.reply.request as IExtendedRequest).user ?? gqlCtx?.ws?.userId
+    );
   },
 );
