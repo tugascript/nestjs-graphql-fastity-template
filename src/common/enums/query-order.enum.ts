@@ -1,23 +1,17 @@
 import { registerEnumType } from '@nestjs/graphql';
 
+export type tOrderEnum = '$gt' | '$lt';
+export type tOpositeOrder = '$gte' | '$lte';
 export enum QueryOrderEnum {
   ASC = 'ASC',
   DESC = 'DESC',
-  asc = 'asc',
-  desc = 'desc',
 }
 
-export const localQueryOrder = (val: QueryOrderEnum): '$gt' | '$lt' => {
-  switch (val) {
-    case QueryOrderEnum.ASC:
-    case QueryOrderEnum.asc:
-      return '$gt';
-    case QueryOrderEnum.DESC:
-    case QueryOrderEnum.desc:
-    default:
-      return '$lt';
-  }
-};
+export const getQueryOrder = (order: QueryOrderEnum): tOrderEnum =>
+  order === QueryOrderEnum.ASC ? '$gt' : '$lt';
+
+export const getOppositeOrder = (order: QueryOrderEnum): tOpositeOrder =>
+  order === QueryOrderEnum.ASC ? '$lte' : '$gte';
 
 registerEnumType(QueryOrderEnum, {
   name: 'QueryOrder',

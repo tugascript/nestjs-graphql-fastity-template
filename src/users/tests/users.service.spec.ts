@@ -105,7 +105,7 @@ describe('UsersService', () => {
 
       expect(paginated.edges.length).toBeDefined();
       expect(paginated.pageInfo).toBeDefined();
-      expect(paginated.totalCount).toBeDefined();
+      expect(paginated.currentCount).toBeDefined();
 
       idToDelete = paginated.edges[0]?.node.id;
     });

@@ -3,13 +3,16 @@ export interface IEdge<T> {
   node: T;
 }
 
-interface IPageInfo {
+export interface IPageInfo {
   endCursor: string;
+  startCursor: string;
   hasNextPage: boolean;
+  hasPreviousPage: boolean;
 }
 
 export interface IPaginated<T> {
-  totalCount: number;
+  previousCount: number;
+  currentCount: number;
   edges: IEdge<T>[];
   pageInfo: IPageInfo;
 }

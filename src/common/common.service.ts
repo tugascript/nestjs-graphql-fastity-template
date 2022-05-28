@@ -1,5 +1,5 @@
 import { Dictionary, FilterQuery } from '@mikro-orm/core';
-import { EntityRepository, QueryBuilder } from '@mikro-orm/postgresql';
+import { QueryBuilder } from '@mikro-orm/postgresql';
 import {
   BadRequestException,
   ConflictException,
@@ -11,8 +11,13 @@ import { validate } from 'class-validator';
 import slugify from 'slugify';
 import { v4 as uuidV4 } from 'uuid';
 import { NotificationTypeEnum } from './enums/notification-type.enum';
-import { localQueryOrder, QueryOrderEnum } from './enums/query-order.enum';
-import { ICountResult } from './interfaces/count-result.interface';
+import {
+  getQueryOrder,
+  getOppositeOrder,
+  QueryOrderEnum,
+  tOrderEnum,
+  tOpositeOrder,
+} from './enums/query-order.enum';
 import { INotification } from './interfaces/notification.interface';
 import { IEdge, IPaginated } from './interfaces/paginated.interface';
 
@@ -25,31 +30,37 @@ export class CommonService {
    * Paginate
    *
    * Takes an entity array and returns the paginated type of that entity array
-   * It uses cursor pagination as recomended in https://graphql.org/learn/pagination/
+   * It uses cursor pagination as recommended in https://relay.dev/graphql/connections.htm
    */
   public paginate<T>(
     instances: T[],
-    totalCount: number,
+    currentCount: number,
+    previousCount: number,
     cursor: keyof T,
     first: number,
     innerCursor?: string,
   ): IPaginated<T> {
     const pages: IPaginated<T> = {
-      totalCount,
+      currentCount,
+      previousCount,
       edges: [],
       pageInfo: {
         endCursor: '',
+        startCursor: '',
+        hasPreviousPage: false,
         hasNextPage: false,
       },
     };
-
     const len = instances.length;
+
     if (len > 0) {
       for (let i = 0; i < len; i++) {
         pages.edges.push(this.createEdge(instances[i], cursor, innerCursor));
       }
+      pages.pageInfo.startCursor = pages.edges[0].cursor;
       pages.pageInfo.endCursor = pages.edges[len - 1].cursor;
-      pages.pageInfo.hasNextPage = totalCount > first;
+      pages.pageInfo.hasNextPage = currentCount > first;
+      pages.pageInfo.hasPreviousPage = previousCount > 0;
     }
 
     return pages;
@@ -128,7 +139,7 @@ export class CommonService {
    * Takes a query builder and returns the entities paginated
    */
   public async queryBuilderPagination<T>(
-    name: string,
+    alias: string,
     cursor: keyof T,
     first: number,
     order: QueryOrderEnum,
@@ -137,88 +148,42 @@ export class CommonService {
     afterIsNum = false,
     innerCursor?: string,
   ): Promise<IPaginated<T>> {
+    const strCursor = String(cursor); // because of runtime issues
+    let prevCount = 0;
+
     if (after) {
       const decoded = this.decodeCursor(after, afterIsNum);
-      const orderOperation = localQueryOrder(order);
-      const where: FilterQuery<Record<string, unknown>> = innerCursor
-        ? {
-            [cursor]: {
-              [innerCursor]: {
-                [orderOperation]: decoded,
-              },
-            },
-          }
-        : {
-            [cursor]: {
-              [orderOperation]: decoded,
-            },
-          };
+      const oppositeOd = getOppositeOrder(order);
+      const tempQb = qb.clone();
+      tempQb.andWhere(
+        this.getFilters(cursor, decoded, oppositeOd, innerCursor),
+      );
+      prevCount = await tempQb.count(`${alias}.${strCursor}`, true);
 
-      qb.andWhere(where);
+      const normalOd = getQueryOrder(order);
+      qb.andWhere(this.getFilters(cursor, decoded, normalOd, innerCursor));
     }
 
-    const nqb = qb;
-    const cqb = qb;
-    const [countResult, entities]: [ICountResult[], T[]] =
-      await this.throwInternalError(
-        Promise.all([
-          cqb.count(`${name}.${cursor}`, true).execute(),
-          nqb
-            .select(`${name}.*`)
-            .orderBy(this.getOrderBy(cursor, order, innerCursor))
-            .limit(first)
-            .getResult(),
-        ]),
-      );
+    const cqb = qb.clone();
+    const [count, entities]: [number, T[]] = await this.throwInternalError(
+      Promise.all([
+        cqb.count(`${alias}.${strCursor}`, true),
+        qb
+          .select(`${alias}.*`)
+          .orderBy(this.getOrderBy(cursor, order, innerCursor))
+          .limit(first)
+          .getResult(),
+      ]),
+    );
 
     return this.paginate(
       entities,
-      countResult[0].count,
+      count,
+      prevCount,
       cursor,
       first,
       innerCursor,
     );
-  }
-
-  /**
-   * Find And Count Pagination
-   *
-   * Takes an entity repository and a FilterQuery and returns the paginated
-   * entities
-   */
-  public async findAndCountPagination<T>(
-    cursor: keyof T,
-    first: number,
-    order: QueryOrderEnum,
-    repo: EntityRepository<T>,
-    where: FilterQuery<T>,
-    after?: string,
-    afterIsNum = false,
-    innerCursor?: string,
-  ): Promise<IPaginated<T>> {
-    if (after) {
-      const decoded = this.decodeCursor(after, afterIsNum);
-      const orderOperation = localQueryOrder(order);
-
-      where['$and'] = {
-        [cursor]: innerCursor
-          ? {
-              [innerCursor]: {
-                [orderOperation]: decoded,
-              },
-            }
-          : {
-              [orderOperation]: decoded,
-            },
-      };
-    }
-
-    const [entities, count] = await repo.findAndCount(where, {
-      orderBy: this.getOrderBy(cursor, order, innerCursor),
-      limit: first,
-    });
-
-    return this.paginate(entities, count, cursor, first, innerCursor);
   }
 
   private getOrderBy<T>(
@@ -234,6 +199,32 @@ export class CommonService {
         }
       : {
           [cursor]: order,
+        };
+  }
+
+  /**
+   * Get Filters
+   *
+   * Gets the where clause filter logic for the query builder pagination
+   */
+  private getFilters<T>(
+    cursor: keyof T,
+    decoded: string | number,
+    order: tOrderEnum | tOpositeOrder,
+    innerCursor?: string,
+  ): FilterQuery<Dictionary<T>> {
+    return innerCursor
+      ? {
+          [cursor]: {
+            [innerCursor]: {
+              [order]: decoded,
+            },
+          },
+        }
+      : {
+          [cursor]: {
+            [order]: decoded,
+          },
         };
   }
 
