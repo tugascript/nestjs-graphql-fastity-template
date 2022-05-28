@@ -1616,6 +1616,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fastify/csrf-protection@npm:^4.0.1":
+  version: 4.0.1
+  resolution: "@fastify/csrf-protection@npm:4.0.1"
+  dependencies:
+    "@fastify/csrf": ^4.0.0
+    fastify-plugin: ^3.0.0
+    http-errors: ^2.0.0
+  checksum: 99e9acd2f91bba3bfe2972a530691224da324b35ecc3a7c3c4e0d66a61f0756bdae957ccb1390738f6525331ddb5edcb87dae6a87a5fd6da711ad55a0f3f0801
+  languageName: node
+  linkType: hard
+
 "@fastify/csrf@npm:^4.0.0":
   version: 4.0.1
   resolution: "@fastify/csrf@npm:4.0.1"
@@ -4102,6 +4113,7 @@ __metadata:
     "@faker-js/faker": ^6.3.1
     "@fastify/cookie": ^6.0.0
     "@fastify/cors": ^7.0.0
+    "@fastify/csrf-protection": ^4.0.1
     "@fastify/static": ^5.0.2
     "@mikro-orm/cli": ^5.1.4
     "@mikro-orm/core": ^5.1.4
@@ -4141,7 +4153,6 @@ __metadata:
     eslint-config-prettier: ^8.5.0
     eslint-plugin-prettier: ^4.0.0
     fastify: ^3.29.0
-    fastify-csrf: ^3.1.0
     graphql: ^16.5.0
     handlebars: ^4.7.7
     ioredis: ^5.0.5
@@ -5187,6 +5198,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"depd@npm:2.0.0":
+  version: 2.0.0
+  resolution: "depd@npm:2.0.0"
+  checksum: abbe19c768c97ee2eed6282d8ce3031126662252c58d711f646921c9623f9052e3e1906443066beec1095832f534e57c523b7333f8e7e0d93051ab6baef5ab3a
+  languageName: node
+  linkType: hard
+
 "depd@npm:^1.1.2, depd@npm:~1.1.2":
   version: 1.1.2
   resolution: "depd@npm:1.1.2"
@@ -5948,17 +5966,6 @@ __metadata:
     fastify-cors-deprecated: "npm:fastify-cors@6.0.3"
     process-warning: ^1.0.0
   checksum: dca7c39b4e515ea896aa07ad5c05c70100f427e4c92e3e0fae7cab7d8ccfc824c946723a7e90b4859a5802244932d0af5ee70d753f686092e8c47fca6700e370
-  languageName: node
-  linkType: hard
-
-"fastify-csrf@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "fastify-csrf@npm:3.1.0"
-  dependencies:
-    "@fastify/csrf": ^4.0.0
-    fastify-plugin: ^3.0.0
-    http-errors: ^1.8.0
-  checksum: f0d12d0201e402ddab84645f70f83ca3cff2ca5b65f7a2919fdca5d9b71788fa697143482baf75475b0a256f40d45c9618b087ec32bedeaed425e4bb164a9a4d
   languageName: node
   linkType: hard
 
@@ -6828,7 +6835,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"http-errors@npm:1.8.1, http-errors@npm:^1.8.0, http-errors@npm:^1.8.1":
+"http-errors@npm:1.8.1, http-errors@npm:^1.8.1":
   version: 1.8.1
   resolution: "http-errors@npm:1.8.1"
   dependencies:
@@ -6838,6 +6845,19 @@ __metadata:
     statuses: ">= 1.5.0 < 2"
     toidentifier: 1.0.1
   checksum: d3c7e7e776fd51c0a812baff570bdf06fe49a5dc448b700ab6171b1250e4cf7db8b8f4c0b133e4bfe2451022a5790c1ca6c2cae4094dedd6ac8304a1267f91d2
+  languageName: node
+  linkType: hard
+
+"http-errors@npm:^2.0.0":
+  version: 2.0.0
+  resolution: "http-errors@npm:2.0.0"
+  dependencies:
+    depd: 2.0.0
+    inherits: 2.0.4
+    setprototypeof: 1.2.0
+    statuses: 2.0.1
+    toidentifier: 1.0.1
+  checksum: 9b0a3782665c52ce9dc658a0d1560bcb0214ba5699e4ea15aefb2a496e2ca83db03ebc42e1cce4ac1f413e4e0d2d736a3fd755772c556a9a06853ba2a0b7d920
   languageName: node
   linkType: hard
 
@@ -10823,6 +10843,13 @@ __metadata:
   version: 2.1.0
   resolution: "standard-as-callback@npm:2.1.0"
   checksum: 88bec83ee220687c72d94fd86a98d5272c91d37ec64b66d830dbc0d79b62bfa6e47f53b71646011835fc9ce7fae62739545d13124262b53be4fbb3e2ebad551c
+  languageName: node
+  linkType: hard
+
+"statuses@npm:2.0.1":
+  version: 2.0.1
+  resolution: "statuses@npm:2.0.1"
+  checksum: 18c7623fdb8f646fb213ca4051be4df7efb3484d4ab662937ca6fbef7ced9b9e12842709872eb3020cc3504b93bde88935c9f6417489627a7786f24f8031cbcb
   languageName: node
   linkType: hard
 
