@@ -24,7 +24,7 @@ It implements:
 - Pagination:
 
 * - Has the generics for Edges and Paginated types
-* - A basic one way cursor pagination function
+* - Relay cursor pagination function
 
 ## Installation
 
