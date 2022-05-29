@@ -23,6 +23,7 @@ import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
 import { SearchDto } from '../common/dtos/search.dto';
 import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
+import { RatioEnum } from '../common/enums/ratio.enum';
 
 @Injectable()
 export class UsersService {
@@ -93,7 +94,11 @@ export class UsersService {
     const user = await this.getUserById(userId);
     const toDelete = user.picture;
 
-    user.picture = await this.uploaderService.uploadImage(userId, picture, 1);
+    user.picture = await this.uploaderService.uploadImage(
+      userId,
+      picture,
+      RatioEnum.SQUARE,
+    );
 
     if (toDelete) await this.uploaderService.deleteFile(toDelete);
 
