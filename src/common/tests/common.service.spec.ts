@@ -29,7 +29,6 @@ describe('CommonService', () => {
     it('should cursor paginate the first 15 entities', () => {
       const paged = service.paginate(data.slice(0, 15), 50, 0, 'id', 15);
       const first = paged.edges[0];
-      console.log(first.node.id);
       expect(first.cursor).toBe(Buffer.from('1', 'utf-8').toString('base64'));
       expect(service.decodeCursor(paged.pageInfo.endCursor, true)).toBe(15);
       expect(paged.pageInfo.hasNextPage).toBe(true);

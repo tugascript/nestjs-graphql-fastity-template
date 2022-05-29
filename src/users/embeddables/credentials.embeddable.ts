@@ -15,7 +15,7 @@ export class CredentialsEmbeddable {
   public updatedAt: number = dayjs().unix();
 
   constructor(input?: Partial<ICredentials>) {
-    // NOTE: I know this can be done with a forin
+    // NOTE: I know this can be done with a for in
     if (input) {
       const { version, lastPassword, updatedAt } = input;
       this.version = version ?? this.version;

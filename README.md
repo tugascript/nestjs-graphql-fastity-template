@@ -2,29 +2,38 @@
 
 ## Description
 
-Full boiler plate of a NestJS, GraphQL and PostgreSQL (with Mikro-ORM) monolithic backend app.
+Full boilerplate of a NestJS, GraphQL and PostgreSQL (with Mikro-ORM) monolithic backend app.
 It implements:
 
 - Configuration (adds most used config classes):
 
-* - Cache with Redis
-* - GraphQL with subscriptions and GraphQL through Websockets
-* - MikroORM with SQLite in development and PostgreSQL in production
+*
+    - Cache with Redis
+*
+    - GraphQL with subscriptions and GraphQL through Websockets
+*
+    - MikroORM with SQLite in development and PostgreSQL in production
 
 - Authentication:
 
-* - JWT Authentication for HTTP
-* - Custom Session Authentication for Websockets (based on Facebook Messenger Design)
-* - Two-Factor authentication with email
+*
+    - JWT Authentication for HTTP
+*
+    - Custom Session Authentication for Websockets (based on Facebook Messenger Design)
+*
+    - Two-Factor authentication with email
 
 - Uploader:
 
-* - Basic image only uploader with Sharp optimizations for a generic S3 Bucket
+*
+    - Basic image only uploader with Sharp optimizations for a generic S3 Bucket
 
 - Pagination:
 
-* - Has the generics for Edges and Paginated types
-* - Relay cursor pagination function
+*
+    - Has the generics for Edges and Paginated types
+*
+    - Relay cursor pagination function
 
 ## Installation
 
@@ -85,11 +94,15 @@ $ yarn run test service-name.service.spec.ts --detectOpenHandles
 
 ## Support the frameworks used in this template
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If
+you'd like to join them, please [read more here](https://docs.nestjs.com/support).
 
-Mikro-ORM is a TypeScript ORM for Node.js based on Data Mapper, Unit of Work and Identity Map patterns. If you like MikroORM, give it a [star](https://github.com/mikro-orm/mikro-orm) on GitHub and consider [sponsoring](https://github.com/sponsors/B4nan) its development!
+Mikro-ORM is a TypeScript ORM for Node.js based on Data Mapper, Unit of Work and Identity Map patterns. If you like
+MikroORM, give it a [star](https://github.com/mikro-orm/mikro-orm) on GitHub and
+consider [sponsoring](https://github.com/sponsors/B4nan) its development!
 
-[Sharp](https://github.com/lovell/sharp) is a high performance Node.js image processor. If you want to [support them.](https://opencollective.com/libvips)
+[Sharp](https://github.com/lovell/sharp) is a high performance Node.js image processor. If you want
+to [support them.](https://opencollective.com/libvips)
 
 ## License
 

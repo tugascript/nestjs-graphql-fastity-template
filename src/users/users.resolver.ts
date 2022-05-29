@@ -11,13 +11,13 @@ import { Public } from '../auth/decorators/public.decorator';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { IPaginated } from '../common/interfaces/paginated.interface';
 import { GetUserDto } from './dtos/get-user.dto';
-import { GetUsersDto } from './dtos/get-users.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
 import { PaginatedUsersType } from './gql-types/paginated-users.type';
 import { UserType } from './gql-types/user.type';
 import { UsersService } from './users.service';
+import { SearchDto } from '../common/dtos/search.dto';
 
 @Resolver(() => UserType)
 export class UsersResolver {
@@ -58,11 +58,11 @@ export class UsersResolver {
 
   //____________________ PUBLIC QUERIES ____________________
   /*
-    Usefull for social media style apps where user haves descriptions
-    and profiles, I haven't implemented a profile in the user entity
-    but these are just example queries in case you implement one of
-    your own
-  */
+          Useful for social media style apps where user haves descriptions
+          and profiles, I haven't implemented a profile in the user entity
+          but these are just example queries in case you implement one of
+          your own
+        */
 
   @Public()
   @Query(() => UserType)
@@ -73,7 +73,7 @@ export class UsersResolver {
   @Public()
   @Query(() => PaginatedUsersType)
   public async findUsers(
-    @Args() dto: GetUsersDto,
+    @Args() dto: SearchDto,
   ): Promise<IPaginated<UserEntity>> {
     return this.usersService.findUsers(dto);
   }

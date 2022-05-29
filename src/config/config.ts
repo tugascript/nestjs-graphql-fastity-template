@@ -74,7 +74,6 @@ export function config(): IConfig {
       maxFiles: parseInt(process.env.MAX_FILES, 10),
     },
     sessionTime: parseInt(process.env.WS_TIME, 10),
-    likeOperator: testing ? '$like' : '$ilike',
     throttler: {
       ttl: parseInt(process.env.THROTTLE_TTL, 10),
       limit: parseInt(process.env.THROTTLE_LIMIT, 10),

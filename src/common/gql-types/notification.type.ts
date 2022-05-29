@@ -2,8 +2,9 @@ import { Type } from '@nestjs/common';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { NotificationTypeEnum } from '../enums/notification-type.enum';
 import { Edge } from './edge.type';
+import { INotification } from '../interfaces/notification.interface';
 
-export function Notification<T>(classRef: Type<T>): any {
+export function Notification<T>(classRef: Type<T>): Type<INotification<T>> {
   @ObjectType(`${classRef.name}NotificationEdge`)
   abstract class EdgeType extends Edge(classRef) {}
 
@@ -15,5 +16,6 @@ export function Notification<T>(classRef: Type<T>): any {
     @Field(() => EdgeType)
     public edge: EdgeType;
   }
-  return NotificationType;
+
+  return NotificationType as Type<INotification<T>>;
 }

@@ -1,10 +1,10 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { CacheModule, CACHE_MANAGER } from '@nestjs/common';
+import { CACHE_MANAGER, CacheModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import { v5, v4 } from 'uuid';
+import { v4, v5 } from 'uuid';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
 import { LocalMessageType } from '../../common/gql-types/message.type';
@@ -37,12 +37,6 @@ class ResponseMock {
   public cookie(name: string, token: string, options?: any) {
     this.cookies = `${name}=${token}`;
     if (options) this.options = options;
-  }
-
-  public clearCookie(name: string) {
-    if (this.cookies.split('=')[0] === name) {
-      this.cookies = '';
-    }
   }
 }
 

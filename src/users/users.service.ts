@@ -17,16 +17,19 @@ import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/gql-types/message.type';
 import { IPaginated } from '../common/interfaces/paginated.interface';
-import { tLikeOperator } from '../config/interfaces/jwt.interface';
 import { UploaderService } from '../uploader/uploader.service';
-import { GetUsersDto } from './dtos/get-users.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
-import { getUserCursor } from './enums/users-cursor.enum';
+import { SearchDto } from '../common/dtos/search.dto';
+import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
 
 @Injectable()
 export class UsersService {
+  private readonly wsNamespace = this.configService.get<string>('WS_UUID');
+  private readonly wsAccessTime =
+    this.configService.get<number>('jwt.wsAccess.time');
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: EntityRepository<UserEntity>,
@@ -36,14 +39,6 @@ export class UsersService {
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
   ) {}
-
-  private readonly likeOperator =
-    this.configService.get<tLikeOperator>('likeOperator');
-  private readonly wsNamespace = this.configService.get<string>('WS_UUID');
-  private readonly wsAccessTime =
-    this.configService.get<number>('jwt.wsAccess.time');
-  private readonly cookieName =
-    this.configService.get<string>('REFRESH_COOKIE');
 
   //____________________ MUTATIONS ____________________
 
@@ -109,7 +104,7 @@ export class UsersService {
   /**
    * Update Default Status
    *
-   * Updates the defualt online status of current user
+   * Updates the default online status of current user
    */
   public async updateDefaultStatus(
     userId: number,
@@ -154,10 +149,7 @@ export class UsersService {
       await this.cacheManager.del(uuidV5(userId.toString(), this.wsNamespace));
     } catch (_) {}
 
-    await this.commonService.throwInternalError(
-      this.usersRepository.removeAndFlush(user),
-    );
-
+    await this.commonService.removeEntity(this.usersRepository, user);
     return new LocalMessageType('Account deleted successfully');
   }
 
@@ -182,8 +174,7 @@ export class UsersService {
   public async getUncheckUser(
     email: string,
   ): Promise<UserEntity | undefined | null> {
-    const user = await this.usersRepository.findOne({ email });
-    return user;
+    return this.usersRepository.findOne({ email });
   }
 
   /**
@@ -194,8 +185,7 @@ export class UsersService {
   public async getUncheckUserById(
     id: number,
   ): Promise<UserEntity | undefined | null> {
-    const user = await this.usersRepository.findOne({ id });
-    return user;
+    return this.usersRepository.findOne({ id });
   }
 
   /**
@@ -214,9 +204,9 @@ export class UsersService {
   }
 
   /**
-   * Get User By Id
+   * Get User By ID
    *
-   * Gets user by id, usually the current logged in user
+   * Gets user by id, usually the current logged-in user
    */
   public async getUserById(id: number): Promise<UserEntity> {
     const user = await this.usersRepository.findOne({ id });
@@ -246,7 +236,7 @@ export class UsersService {
     cursor,
     first,
     after,
-  }: GetUsersDto): Promise<IPaginated<UserEntity>> {
+  }: SearchDto): Promise<IPaginated<UserEntity>> {
     const name = 'u';
 
     const qb = this.usersRepository.createQueryBuilder(name).where({
@@ -256,14 +246,14 @@ export class UsersService {
     if (search) {
       qb.andWhere({
         name: {
-          [this.likeOperator]: this.commonService.formatSearch(search),
+          $ilike: this.commonService.formatSearch(search),
         },
       });
     }
 
     return await this.commonService.queryBuilderPagination(
       name,
-      getUserCursor(cursor),
+      getUserQueryCursor(cursor),
       first,
       order,
       qb,
@@ -281,13 +271,6 @@ export class UsersService {
    * to be shared with the auth service.
    */
   public async saveUserToDb(user: UserEntity, isNew = false): Promise<void> {
-    await this.commonService.validateEntity(user);
-
-    if (isNew) this.usersRepository.persist(user);
-
-    await this.commonService.throwDuplicateError(
-      this.usersRepository.flush(),
-      'Email already exists',
-    );
+    await this.commonService.saveEntity(this.usersRepository, user, isNew);
   }
 }

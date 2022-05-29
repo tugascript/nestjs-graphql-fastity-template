@@ -16,75 +16,28 @@ import { MAX_WIDTH, QUALITY_ARRAY } from './utils/uploader.constants';
 
 @Injectable()
 export class UploaderService {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly commonService: CommonService,
-  ) {}
-
   private readonly client = new S3Client(
     this.configService.get<S3ClientConfig>('bucketConfig'),
   );
   private readonly bucketData =
     this.configService.get<IBucketData>('bucketData');
 
-  /**
-   * Upload Image
-   *
-   * Converts an image to jpeg and uploads it to the bucket
-   */
-  public async uploadImage(
-    userId: number,
-    file: Promise<FileUploadDto>,
-    ratio?: number,
-  ): Promise<string> {
-    const { mimetype, createReadStream } = await file;
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly commonService: CommonService,
+  ) {}
 
-    const imageType = this.validateImage(mimetype);
-    if (!imageType)
-      throw new BadRequestException('Please upload a valid image');
-
-    let buffer = await this.commonService.throwInternalError(
-      this.streamToBuffer(createReadStream()),
-    );
-    buffer = await this.compressImage(buffer, ratio);
-
-    return await this.uploadFile(userId, buffer, '.jpg');
-  }
-
-  /**
-   * Delete File
-   *
-   * Takes an url and deletes the file from the bucket
-   */
-  public async deleteFile(url: string): Promise<void> {
-    if (!this.validateBucketUrl(url))
-      throw new BadRequestException('Url not valid');
-    const keyArr = url.split('/');
-
-    try {
-      await this.client.send(
-        new DeleteObjectCommand({
-          Bucket: this.bucketData.name,
-          Key: keyArr[keyArr.length - 1],
-        }),
-      );
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
-  }
-
-  private validateImage(mimetype: string): string | false {
+  private static validateImage(mimetype: string): string | false {
     const val = mimetype.split('/');
     if (val[0] !== 'image') return false;
 
     return val[1] ?? false;
   }
 
-  private validateBucketUrl(url: string): boolean {
-    return url.includes(this.bucketData.url.substring(8));
-  }
-
-  private async compressImage(buffer: Buffer, ratio?: number): Promise<Buffer> {
+  private static async compressImage(
+    buffer: Buffer,
+    ratio?: number,
+  ): Promise<Buffer> {
     let compressBuffer: sharp.Sharp | Buffer = sharp(buffer).jpeg({
       mozjpeg: true,
       chromaSubsampling: '4:4:4',
@@ -117,6 +70,56 @@ export class UploaderService {
     }
 
     return compressBuffer;
+  }
+
+  /**
+   * Upload Image
+   *
+   * Converts an image to jpeg and uploads it to the bucket
+   */
+  public async uploadImage(
+    userId: number,
+    file: Promise<FileUploadDto>,
+    ratio?: number,
+  ): Promise<string> {
+    const { mimetype, createReadStream } = await file;
+
+    const imageType = UploaderService.validateImage(mimetype);
+    if (!imageType)
+      throw new BadRequestException('Please upload a valid image');
+
+    let buffer = await this.commonService.throwInternalError(
+      this.streamToBuffer(createReadStream()),
+    );
+    buffer = await UploaderService.compressImage(buffer, ratio);
+
+    return await this.uploadFile(userId, buffer, '.jpg');
+  }
+
+  /**
+   * Delete File
+   *
+   * Takes an url and deletes the file from the bucket
+   */
+  public async deleteFile(url: string): Promise<void> {
+    if (!this.validateBucketUrl(url))
+      throw new BadRequestException('Url not valid');
+    const keyArr = url.split('/');
+
+    try {
+      await this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucketData.name,
+          Key: keyArr[keyArr.length - 1],
+        }),
+      );
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+
+  private validateBucketUrl(url: string): boolean {
+    return url.includes(this.bucketData.url.substring(8));
   }
 
   private async streamToBuffer(stream: Readable): Promise<Buffer> {

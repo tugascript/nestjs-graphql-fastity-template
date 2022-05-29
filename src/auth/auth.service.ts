@@ -41,15 +41,6 @@ import {
 
 @Injectable()
 export class AuthService {
-  constructor(
-    private readonly usersService: UsersService,
-    private readonly configService: ConfigService,
-    private readonly emailService: EmailService,
-    private readonly commonService: CommonService,
-    @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache,
-  ) {}
-
   private readonly cookieName =
     this.configService.get<string>('REFRESH_COOKIE');
   private readonly url = this.configService.get<string>('url');
@@ -62,13 +53,41 @@ export class AuthService {
     this.configService.get<number>('jwt.access.time');
   private readonly sessionTime = this.configService.get<number>('sessionTime');
 
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
+    private readonly commonService: CommonService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
+  ) {}
+
+  //____________________ STATIC ____________________
+
+  /**
+   * Generate Access Code
+   *
+   * Generates a 6 char long number string for two-factor auth
+   */
+  private static generateAccessCode(): string {
+    const nums = '0123456789';
+
+    let code = '';
+    while (code.length < 6) {
+      const i = Math.floor(Math.random() * nums.length);
+      code += nums[i];
+    }
+
+    return code;
+  }
+
   //____________________ MUTATIONS ____________________
 
   /**
    * Register User
    *
    * Takes the register input, creates a new user in the db
-   * and asyncronously sends a confirmation email
+   * and asynchronously sends a confirmation email
    */
   public async registerUser(input: RegisterDto): Promise<LocalMessageType> {
     const user = await this.usersService.createUser(input);
@@ -107,8 +126,8 @@ export class AuthService {
   /**
    * Login User
    *
-   * Takes the login input, if two factor auth is true: it caches a new access code and
-   * asyncronously sends it by email. If false, it sends an auth type
+   * Takes the login input, if two-factor auth is true: it caches a new access code and
+   * asynchronously sends it by email. If false, it sends an auth type
    */
   public async loginUser(
     res: FastifyReply,
@@ -158,7 +177,7 @@ export class AuthService {
     }
 
     if (user.twoFactor) {
-      const code = this.generateAccessCode();
+      const code = AuthService.generateAccessCode();
 
       await this.commonService.throwInternalError(
         this.cacheManager.set(
@@ -204,7 +223,7 @@ export class AuthService {
   /**
    * Confirm Login
    *
-   * Takes the confirm login input, checks the access code
+   * Takes the confirmation login input, checks the access code
    * and logins the user
    */
   public async confirmLogin(
@@ -245,7 +264,7 @@ export class AuthService {
    * Takes the request and response, and generates new auth tokens
    * based on the current refresh token.
    *
-   * It generates both tokens so the user can stay logged in indefinatly
+   * It generates both tokens so the user can stay logged in indefinitely
    */
   public async refreshAccessToken(
     req: FastifyRequest,
@@ -325,9 +344,9 @@ export class AuthService {
   }
 
   /**
-   * Change Two Factor Auth
+   * Change Two-Factor Auth
    *
-   * Activates or deactivates two factor auth
+   * Activates or deactivates two-factor auth
    */
   public async changeTwoFactorAuth(userId: number): Promise<LocalMessageType> {
     const user = await this.usersService.getUserById(userId);
@@ -370,6 +389,8 @@ export class AuthService {
     return { accessToken };
   }
 
+  //____________________ WebSocket Auth ____________________
+
   /**
    * Update Password
    *
@@ -402,8 +423,6 @@ export class AuthService {
 
     return { accessToken };
   }
-
-  //____________________ WebSocket Auth ____________________
 
   /**
    * Generate Websocket Session
@@ -478,10 +497,12 @@ export class AuthService {
     return true;
   }
 
+  //____________________ OTHER METHODS ____________________
+
   /**
    * Close User Session
    *
-   * Removes websocket session from cache, if its the only
+   * Removes websocket session from cache, if it's the only
    * one, makes the user online status offline
    */
   public async closeUserSession({ userId, sessionId }: IWsCtx): Promise<void> {
@@ -509,7 +530,7 @@ export class AuthService {
     await this.saveSessionData(userUuid, sessionData);
   }
 
-  //____________________ OTHER METHODS ____________________
+  //____________________ PRIVATE METHODS ____________________
 
   /**
    * Verify Auth Token
@@ -532,8 +553,6 @@ export class AuthService {
       }
     }
   }
-
-  //____________________ PRIVATE METHODS ____________________
 
   /**
    * Send Confirmation Email
@@ -572,7 +591,7 @@ export class AuthService {
   /**
    * Generate Jwt Token
    *
-   * A generict jwt generator that generates all tokens needed
+   * A generic jwt generator that generates all tokens needed
    * for auth (access, refresh, confirmation & resetPassword)
    */
   private async generateAuthToken(
@@ -587,26 +606,9 @@ export class AuthService {
   }
 
   /**
-   * Generate Access Code
-   *
-   * Generates a 6 char long number string for two factor auth
-   */
-  private generateAccessCode(): string {
-    const nums = '0123456789';
-
-    let code = '';
-    while (code.length < 6) {
-      const i = Math.floor(Math.random() * nums.length);
-      code += nums[i];
-    }
-
-    return code;
-  }
-
-  /**
    * Save Refresh Cookie
    *
-   * Saves the refresh token as an http only cookie to
+   * Saves the refresh token as a http only cookie to
    * be used for refreshing the access token
    */
   private saveRefreshCookie(res: FastifyReply, token: string): void {

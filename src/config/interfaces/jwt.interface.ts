@@ -9,5 +9,3 @@ export interface IJwt {
   resetPassword: ISingleJwt;
   refresh: ISingleJwt;
 }
-
-export type tLikeOperator = '$ilike' | '$like';

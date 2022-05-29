@@ -24,8 +24,7 @@ export class AuthController {
   public async registerUser(
     @Body() registerDto: RegisterDto,
   ): Promise<LocalMessageType> {
-    const message = await this.authService.registerUser(registerDto);
-    return message;
+    return this.authService.registerUser(registerDto);
   }
 
   @Public()
@@ -97,7 +96,7 @@ export class AuthController {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
-  @Post('/toogle-two-factor')
+  @Post('/toggle-two-factor')
   public async changeTwoFactorAuth(
     @CurrentUser() userId: number,
   ): Promise<LocalMessageType> {

@@ -5,7 +5,7 @@ import { UploadOptions } from 'graphql-upload';
 import { RedisOptions } from 'ioredis';
 import { IBucketData } from './bucket-data.inteface';
 import { IEmailConfig } from './email-config.interface';
-import { IJwt, tLikeOperator } from './jwt.interface';
+import { IJwt } from './jwt.interface';
 
 export interface IConfig {
   port: number;
@@ -20,7 +20,6 @@ export interface IConfig {
   ttl: number;
   upload: UploadOptions;
   testing: boolean;
-  likeOperator: tLikeOperator;
   sessionTime: number;
   throttler: ThrottlerModuleOptions;
 }

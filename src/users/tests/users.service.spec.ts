@@ -14,9 +14,12 @@ import { config } from '../../config/config';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
 import { validationSchema } from '../../config/validation';
 import { UploaderModule } from '../../uploader/uploader.module';
-import { UsersService } from '../../users/users.service';
+import { UsersService } from '../users.service';
 import { UserEntity } from '../entities/user.entity';
-import { UsersCursorEnum } from '../enums/users-cursor.enum';
+import {
+  getUserQueryCursor,
+  QueryCursorEnum,
+} from '../../common/enums/query-cursor.enum';
 
 const PASSWORD = 'Ab123456';
 
@@ -68,14 +71,13 @@ describe('UsersService', () => {
         email,
         password1,
       }: RegisterDto) => {
-        const user = usersRepository.create({
+        return usersRepository.create({
           name,
           email,
           username: commonService.generatePointSlug(name),
           password: await hash(password1, 10),
           confirmed: true,
         });
-        return user;
       };
 
       const userArr: UserEntity[] = [];
@@ -96,10 +98,37 @@ describe('UsersService', () => {
   let idToDelete: number;
   describe('findUsers', () => {
     it('should get all users containing the letter a', async () => {
+      jest
+        .spyOn(usersService, 'findUsers')
+        .mockImplementation(async ({ search, order, cursor, first, after }) => {
+          const name = 'u';
+
+          const qb = usersRepository.createQueryBuilder(name).where({
+            confirmed: true,
+          });
+
+          if (search) {
+            qb.andWhere({
+              name: {
+                $like: commonService.formatSearch(search),
+              },
+            });
+          }
+
+          return await commonService.queryBuilderPagination(
+            name,
+            getUserQueryCursor(cursor),
+            first,
+            order,
+            qb,
+            after,
+          );
+        });
+
       const paginated = await usersService.findUsers({
         search: 'a',
         order: QueryOrderEnum.DESC,
-        cursor: UsersCursorEnum.DATE,
+        cursor: QueryCursorEnum.DATE,
         first: 20,
       });
 

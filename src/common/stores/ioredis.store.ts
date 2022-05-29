@@ -4,14 +4,18 @@ import { Callback, Redis } from 'ioredis';
 import { IORedisStoreOptions } from '../interfaces/ioredis-store-options.interface';
 
 class IORedisStore implements Store {
+  public readonly name = 'ioredis';
+  private readonly ttlValue: number;
+  private readonly redis: Redis;
+
   constructor({ redis, ttl = 5 }: IORedisStoreOptions) {
     this.redis = redis;
     this.ttlValue = ttl;
   }
 
-  public readonly name = 'ioredis';
-  private readonly ttlValue: number;
-  private readonly redis: Redis;
+  private static isCachableValue<T>(value: T): boolean {
+    return value !== undefined && value !== null;
+  }
 
   public getClient() {
     return this.redis;
@@ -40,7 +44,7 @@ class IORedisStore implements Store {
       if (!cb)
         cb = (error, result) => (error ? reject(error) : resolve(result));
 
-      if (!this.isCachableValue(value)) {
+      if (!IORedisStore.isCachableValue(value)) {
         return cb(new Error(`"${value}" is not a cacheable value`));
       }
 
@@ -115,10 +119,6 @@ class IORedisStore implements Store {
 
       this.redis.ttl(key, cb);
     });
-  }
-
-  private isCachableValue<T>(value: T): boolean {
-    return value !== undefined && value !== null;
   }
 }
 

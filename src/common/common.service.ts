@@ -1,5 +1,5 @@
 import { Dictionary, FilterQuery } from '@mikro-orm/core';
-import { QueryBuilder } from '@mikro-orm/postgresql';
+import { EntityRepository, QueryBuilder } from '@mikro-orm/postgresql';
 import {
   BadRequestException,
   ConflictException,
@@ -12,11 +12,11 @@ import slugify from 'slugify';
 import { v4 as uuidV4 } from 'uuid';
 import { NotificationTypeEnum } from './enums/notification-type.enum';
 import {
-  getQueryOrder,
   getOppositeOrder,
+  getQueryOrder,
   QueryOrderEnum,
+  tOppositeOrder,
   tOrderEnum,
-  tOpositeOrder,
 } from './enums/query-order.enum';
 import { INotification } from './interfaces/notification.interface';
 import { IEdge, IPaginated } from './interfaces/paginated.interface';
@@ -24,7 +24,55 @@ import { IEdge, IPaginated } from './interfaces/paginated.interface';
 @Injectable()
 export class CommonService {
   //-------------------- Cursor Pagination --------------------
+
   private readonly buff = Buffer;
+
+  /**
+   * Get Order By
+   *
+   * Makes the order by query for MikroORM orderBy method.
+   */
+  private static getOrderBy<T>(
+    cursor: keyof T,
+    order: QueryOrderEnum,
+    innerCursor?: string,
+  ): Record<string, QueryOrderEnum | Record<string, QueryOrderEnum>> {
+    return innerCursor
+      ? {
+          [cursor]: {
+            [innerCursor]: order,
+          },
+        }
+      : {
+          [cursor]: order,
+        };
+  }
+
+  /**
+   * Get Filters
+   *
+   * Gets the where clause filter logic for the query builder pagination
+   */
+  private static getFilters<T>(
+    cursor: keyof T,
+    decoded: string | number,
+    order: tOrderEnum | tOppositeOrder,
+    innerCursor?: string,
+  ): FilterQuery<Dictionary<T>> {
+    return innerCursor
+      ? {
+          [cursor]: {
+            [innerCursor]: {
+              [order]: decoded,
+            },
+          },
+        }
+      : {
+          [cursor]: {
+            [order]: decoded,
+          },
+        };
+  }
 
   /**
    * Paginate
@@ -64,49 +112,6 @@ export class CommonService {
     }
 
     return pages;
-  }
-
-  /**
-   * Create Edge
-   *
-   * Takes an instance, the cursor key and a innerCursor,
-   * and generates a GraphQL edge
-   */
-  private createEdge<T>(
-    instance: T,
-    cursor: keyof T,
-    innerCursor?: string,
-  ): IEdge<T> {
-    try {
-      return {
-        node: instance,
-        cursor: this.encodeCursor(
-          innerCursor ? instance[cursor][innerCursor] : instance[cursor],
-        ),
-      };
-    } catch (_) {
-      throw new InternalServerErrorException('The given cursor is invalid');
-    }
-  }
-
-  /**
-   * Encode Cursor
-   *
-   * Takes a date, string or number and returns the base 64
-   * representation of it
-   */
-  private encodeCursor(val: Date | string | number): string {
-    let str: string;
-
-    if (val instanceof Date) {
-      str = val.getTime().toString();
-    } else if (typeof val === 'number' || typeof val === 'bigint') {
-      str = val.toString();
-    } else {
-      str = val;
-    }
-
-    return this.buff.from(str, 'utf-8').toString('base64');
   }
 
   /**
@@ -156,12 +161,14 @@ export class CommonService {
       const oppositeOd = getOppositeOrder(order);
       const tempQb = qb.clone();
       tempQb.andWhere(
-        this.getFilters(cursor, decoded, oppositeOd, innerCursor),
+        CommonService.getFilters(cursor, decoded, oppositeOd, innerCursor),
       );
       prevCount = await tempQb.count(`${alias}.${strCursor}`, true);
 
       const normalOd = getQueryOrder(order);
-      qb.andWhere(this.getFilters(cursor, decoded, normalOd, innerCursor));
+      qb.andWhere(
+        CommonService.getFilters(cursor, decoded, normalOd, innerCursor),
+      );
     }
 
     const cqb = qb.clone();
@@ -170,7 +177,7 @@ export class CommonService {
         cqb.count(`${alias}.${strCursor}`, true),
         qb
           .select(`${alias}.*`)
-          .orderBy(this.getOrderBy(cursor, order, innerCursor))
+          .orderBy(CommonService.getOrderBy(cursor, order, innerCursor))
           .limit(first)
           .getResult(),
       ]),
@@ -186,54 +193,12 @@ export class CommonService {
     );
   }
 
-  private getOrderBy<T>(
-    cursor: keyof T,
-    order: QueryOrderEnum,
-    innerCursor?: string,
-  ): Record<string, QueryOrderEnum | Record<string, QueryOrderEnum>> {
-    return innerCursor
-      ? {
-          [cursor]: {
-            [innerCursor]: order,
-          },
-        }
-      : {
-          [cursor]: order,
-        };
-  }
-
-  /**
-   * Get Filters
-   *
-   * Gets the where clause filter logic for the query builder pagination
-   */
-  private getFilters<T>(
-    cursor: keyof T,
-    decoded: string | number,
-    order: tOrderEnum | tOpositeOrder,
-    innerCursor?: string,
-  ): FilterQuery<Dictionary<T>> {
-    return innerCursor
-      ? {
-          [cursor]: {
-            [innerCursor]: {
-              [order]: decoded,
-            },
-          },
-        }
-      : {
-          [cursor]: {
-            [order]: decoded,
-          },
-        };
-  }
-
   //-------------------- Notification Generation --------------------
 
   /**
    * Generate Notification
    *
-   * Generates an entity notification
+   * Generates an entity notification. This is useful for realtime apps only.
    */
   public generateNotification<T>(
     entity: T,
@@ -247,7 +212,7 @@ export class CommonService {
     };
   }
 
-  //-------------------- String Formating --------------------
+  //-------------------- String Formatting --------------------
 
   /**
    * Format Title
@@ -301,7 +266,7 @@ export class CommonService {
   /**
    * Check Existence
    *
-   * Checks if a findOne query did't return null or undefined
+   * Checks if a findOne query didn't return null or undefined
    */
   public checkExistence<T>(name: string, entity?: T | null): void {
     if (!entity) throw new NotFoundException(`${name} not found`);
@@ -312,11 +277,42 @@ export class CommonService {
    *
    * Validates an entity with the class-validator library
    */
-  public async validateEntity(entity: Dictionary<any>): Promise<void> {
+  public async validateEntity(entity: Dictionary): Promise<void> {
     const errors = await validate(entity);
 
     if (errors.length > 0)
       throw new BadRequestException('Entity validation failed');
+  }
+
+  //-------------------- Entity Actions --------------------
+
+  /**
+   * Save Entity
+   *
+   * Validates, saves and flushes entity into the DB
+   */
+  public async saveEntity<T = Dictionary>(
+    repo: EntityRepository<T>,
+    entity: T,
+    isNew = false,
+  ): Promise<void> {
+    await this.validateEntity(entity);
+
+    if (isNew) repo.persist(entity);
+
+    await this.throwDuplicateError(repo.flush());
+  }
+
+  /**
+   * Remove Entity
+   *
+   * Removes an entity from the DB.
+   */
+  public async removeEntity<T = Dictionary>(
+    repo: EntityRepository<T>,
+    entity: T,
+  ): Promise<void> {
+    await this.throwInternalError(repo.removeAndFlush(entity));
   }
 
   //-------------------- Error Handling --------------------
@@ -325,7 +321,7 @@ export class CommonService {
    * Throw Duplicate Error
    *
    * Checks is an error is of the code 23505, PostgreSQL's duplicate value error,
-   * and throws a conflic exception
+   * and throws a conflict exception
    */
   public async throwDuplicateError<T>(promise: Promise<T>, message?: string) {
     try {
@@ -348,5 +344,50 @@ export class CommonService {
     } catch (error) {
       throw new InternalServerErrorException(error);
     }
+  }
+
+  //-------------------- Private Methods --------------------
+
+  /**
+   * Create Edge
+   *
+   * Takes an instance, the cursor key and a innerCursor,
+   * and generates a GraphQL edge
+   */
+  private createEdge<T>(
+    instance: T,
+    cursor: keyof T,
+    innerCursor?: string,
+  ): IEdge<T> {
+    try {
+      return {
+        node: instance,
+        cursor: this.encodeCursor(
+          innerCursor ? instance[cursor][innerCursor] : instance[cursor],
+        ),
+      };
+    } catch (_) {
+      throw new InternalServerErrorException('The given cursor is invalid');
+    }
+  }
+
+  /**
+   * Encode Cursor
+   *
+   * Takes a date, string or number and returns the base 64
+   * representation of it
+   */
+  private encodeCursor(val: Date | string | number): string {
+    let str: string;
+
+    if (val instanceof Date) {
+      str = val.getTime().toString();
+    } else if (typeof val === 'number' || typeof val === 'bigint') {
+      str = val.toString();
+    } else {
+      str = val;
+    }
+
+    return this.buff.from(str, 'utf-8').toString('base64');
   }
 }
