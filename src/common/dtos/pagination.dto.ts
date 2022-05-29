@@ -16,7 +16,7 @@ export class PaginationDto {
   @IsOptional()
   public after?: string;
 
-  @Field(() => Int)
+  @Field(() => Int, { defaultValue: 10 })
   @IsInt()
   @Min(1)
   @Max(50)

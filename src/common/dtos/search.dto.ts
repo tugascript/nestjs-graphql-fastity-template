@@ -1,15 +1,10 @@
 import { ArgsType, Field } from '@nestjs/graphql';
-import { IsEnum, IsOptional, IsString, Length, Matches } from 'class-validator';
+import { IsOptional, IsString, Length, Matches } from 'class-validator';
 import { NAME_REGEX } from '../constants/regex';
-import { QueryCursorEnum } from '../enums/query-cursor.enum';
 import { FilterDto } from './filter.dto';
 
 @ArgsType()
 export abstract class SearchDto extends FilterDto {
-  @Field(() => QueryCursorEnum, { defaultValue: QueryCursorEnum.DATE })
-  @IsEnum(QueryCursorEnum)
-  public cursor: QueryCursorEnum;
-
   @Field(() => String, { nullable: true })
   @IsString()
   @Length(1, 100, {
