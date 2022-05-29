@@ -62,8 +62,7 @@
     "rxjs": "^7.5.5",
     "sharp": "^0.30.5",
     "slugify": "^1.6.5",
-    "uuid": "^8.3.2",
-    "yarn": "^1.22.18"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@faker-js/faker": "^6.3.1",

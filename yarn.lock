@@ -4180,7 +4180,6 @@ __metadata:
     typescript: ^4.7.2
     uuid: ^8.3.2
     webpack: ^5.72.1
-    yarn: ^1.22.18
   languageName: unknown
   linkType: soft
 
@@ -12359,16 +12358,6 @@ __metadata:
     window-size: ^0.1.4
     y18n: ^3.2.0
   checksum: 3e0f7fc1bc2052bcaaa7354cbd33d05a86fc0f236432d107ecd088989fbd175174c562d17e762727acbf25d04e8520d43625f7581b2a6ce55ce10034e80675fc
-  languageName: node
-  linkType: hard
-
-"yarn@npm:^1.22.18":
-  version: 1.22.18
-  resolution: "yarn@npm:1.22.18"
-  bin:
-    yarn: bin/yarn.js
-    yarnpkg: bin/yarn.js
-  checksum: ffd9a4872caa5fce83e914592dd6a40bb978bf992d3dca839bc3853b9e6de951d7596f7e8c4a88bec3af3a049e46097f9139a51740d9074582fd923af8762f7a
   languageName: node
   linkType: hard
 
