@@ -9,12 +9,13 @@ export class LoadersService {
    *
    * Maps the entity object to an array of IDs.
    */
-  private getEntityIds<T extends IBase>(items: ILoader<T>[]): number[] {
+  private getEntityIds<T extends IBase, P = undefined>(
+    items: ILoader<T, P>[],
+  ): number[] {
     const ids: number[] = [];
 
     for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      ids.push(item.obj.id);
+      ids.push(items[i].obj.id);
     }
 
     return ids;
@@ -25,15 +26,14 @@ export class LoadersService {
    *
    * Maps the entity object many-to-one relation to an array of IDs.
    */
-  private getRelationIds<T extends IBase>(
-    items: ILoader<T>[],
+  private getRelationIds<T extends IBase, P = undefined>(
+    items: ILoader<T, P>[],
     relationName: string,
   ): number[] {
     const ids: number[] = [];
 
     for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      ids.push(item.obj[relationName].id);
+      ids.push(items[i].obj[relationName].id);
     }
 
     return ids;
@@ -65,8 +65,7 @@ export class LoadersService {
     const results: T[] = [];
 
     for (let i = 0; i < ids.length; i++) {
-      const id = ids[i];
-      results.push(map.get(id));
+      results.push(map.get(ids[i]));
     }
 
     return results;

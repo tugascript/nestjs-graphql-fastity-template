@@ -174,7 +174,7 @@ export class CommonService {
     const cqb = qb.clone();
     const [count, entities]: [number, T[]] = await this.throwInternalError(
       Promise.all([
-        cqb.count(`${alias}.${strCursor}`, true),
+        cqb.count(strCursor),
         qb
           .select(`${alias}.*`)
           .orderBy(CommonService.getOrderBy(cursor, order, innerCursor))
