@@ -14,16 +14,18 @@ import { MercuriusDriverPlugin } from './interfaces/mercurius-driver-plugin.inte
 import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
+import { LoadersService } from '../loaders/loaders.service';
 
 @Injectable()
 export class GqlConfigService implements GqlOptionsFactory {
+  private readonly testing = this.configService.get<boolean>('testing');
+  private readonly redisOpt = this.configService.get<RedisOptions>('redis');
+
   constructor(
     private readonly configService: ConfigService,
     private readonly authService: AuthService,
+    private readonly loadersService: LoadersService,
   ) {}
-
-  private readonly testing = this.configService.get<boolean>('testing');
-  private readonly redisOpt = this.configService.get<RedisOptions>('redis');
 
   public createGqlOptions(): MercuriusExtendedDriverConfig {
     const plugins: MercuriusDriverPlugin[] = [

@@ -16,6 +16,7 @@ import { validationSchema } from './config/validation';
 import { EmailModule } from './email/email.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
+import { LoadersModule } from './loaders/loaders.module';
 
 @Module({
   imports: [
@@ -34,7 +35,7 @@ import { UsersModule } from './users/users.module';
       useClass: CacheConfig,
     }),
     GraphQLModule.forRootAsync({
-      imports: [ConfigModule, AuthModule],
+      imports: [ConfigModule, AuthModule, LoadersModule],
       driver: GraphQLDriver,
       useClass: GqlConfigService,
     }),
@@ -43,6 +44,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     EmailModule,
     UploaderModule,
+    LoadersModule,
   ],
   providers: [
     {
