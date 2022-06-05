@@ -212,7 +212,7 @@ export class AuthService {
    * Confirms credentials update by user
    */
   public async confirmCredentials(userId: number): Promise<LocalMessageType> {
-    const user = await this.usersService.getUserById(userId);
+    const user = await this.usersService.userById(userId);
 
     user.credentials.updatedAt = dayjs().unix();
     await this.usersService.saveUserToDb(user);
@@ -349,7 +349,7 @@ export class AuthService {
    * Activates or deactivates two-factor auth
    */
   public async changeTwoFactorAuth(userId: number): Promise<LocalMessageType> {
-    const user = await this.usersService.getUserById(userId);
+    const user = await this.usersService.userById(userId);
 
     user.twoFactor = !user.twoFactor;
     await this.usersService.saveUserToDb(user);
@@ -370,7 +370,7 @@ export class AuthService {
     userId: number,
     { email, password }: ChangeEmailDto,
   ): Promise<IAuthResult> {
-    const user = await this.usersService.getUserById(userId);
+    const user = await this.usersService.userById(userId);
 
     if (!(await compare(password, user.password)))
       throw new BadRequestException('Wrong password');
@@ -401,7 +401,7 @@ export class AuthService {
     userId: number,
     { password, password1, password2 }: ChangePasswordDto,
   ): Promise<IAuthResult> {
-    const user = await this.usersService.getUserById(userId);
+    const user = await this.usersService.userById(userId);
 
     if (!(await compare(password, user.password)))
       throw new BadRequestException('Wrong password');
@@ -435,7 +435,7 @@ export class AuthService {
     accessToken: string,
   ): Promise<[number, string]> {
     const { id } = await this.verifyAuthToken(accessToken, 'access');
-    const user = await this.usersService.getUserById(id);
+    const user = await this.usersService.userById(id);
     const userUuid = uuidV5(user.id.toString(), this.wsNamespace);
     const count = user.credentials.version;
     let sessionData = await this.commonService.throwInternalError(
@@ -520,7 +520,7 @@ export class AuthService {
       await this.commonService.throwInternalError(
         this.cacheManager.del(userUuid),
       );
-      const user = await this.usersService.getUserById(userId);
+      const user = await this.usersService.userById(userId);
       user.lastOnline = new Date();
       user.onlineStatus = OnlineStatusEnum.OFFLINE;
       await this.usersService.saveUserToDb(user);

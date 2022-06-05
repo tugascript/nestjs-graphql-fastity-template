@@ -91,7 +91,7 @@ export class UsersService {
     userId: number,
     { picture }: ProfilePictureDto,
   ): Promise<UserEntity> {
-    const user = await this.getUserById(userId);
+    const user = await this.userById(userId);
     const toDelete = user.picture;
 
     user.picture = await this.uploaderService.uploadImage(
@@ -115,7 +115,7 @@ export class UsersService {
     userId: number,
     { defaultStatus }: OnlineStatusDto,
   ): Promise<LocalMessageType> {
-    const user = await this.getUserById(userId);
+    const user = await this.userById(userId);
     user.defaultStatus = defaultStatus;
 
     const userUuid = uuidV5(userId.toString(), this.wsNamespace);
@@ -145,7 +145,7 @@ export class UsersService {
     userId: number,
     password: string,
   ): Promise<LocalMessageType> {
-    const user = await this.getUserById(userId);
+    const user = await this.userById(userId);
 
     if (password.length > 1 && !(await compare(password, user.password)))
       throw new BadRequestException('Wrong password!');
@@ -213,18 +213,18 @@ export class UsersService {
    *
    * Gets user by id, usually the current logged-in user
    */
-  public async getUserById(id: number): Promise<UserEntity> {
+  public async userById(id: number): Promise<UserEntity> {
     const user = await this.usersRepository.findOne({ id });
     this.commonService.checkExistence('User', user);
     return user;
   }
 
   /**
-   * Get User By Username
+   * User By Username
    *
    * Gets user by username, usually for the profile (if it exists)
    */
-  public async getUserByUsername(username: string): Promise<UserEntity> {
+  public async userByUsername(username: string): Promise<UserEntity> {
     const user = await this.usersRepository.findOne({ username });
     this.commonService.checkExistence('User', user);
     return user;
@@ -235,7 +235,7 @@ export class UsersService {
    *
    * Search users usernames and returns paginated results
    */
-  public async findUsers({
+  public async filterUsers({
     search,
     order,
     cursor,

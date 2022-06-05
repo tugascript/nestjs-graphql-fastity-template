@@ -99,7 +99,7 @@ describe('UsersService', () => {
   describe('findUsers', () => {
     it('should get all users containing the letter a', async () => {
       jest
-        .spyOn(usersService, 'findUsers')
+        .spyOn(usersService, 'filterUsers')
         .mockImplementation(async ({ search, order, cursor, first, after }) => {
           const name = 'u';
 
@@ -125,7 +125,7 @@ describe('UsersService', () => {
           );
         });
 
-      const paginated = await usersService.findUsers({
+      const paginated = await usersService.filterUsers({
         search: 'a',
         order: QueryOrderEnum.DESC,
         cursor: QueryCursorEnum.DATE,

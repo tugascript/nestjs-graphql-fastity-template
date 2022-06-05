@@ -18,6 +18,7 @@ import { PaginatedUsersType } from './gql-types/paginated-users.type';
 import { UserType } from './gql-types/user.type';
 import { UsersService } from './users.service';
 import { SearchDto } from '../common/dtos/search.dto';
+import { UserDto } from './dtos/user.dto';
 
 @Resolver(() => UserType)
 export class UsersResolver {
@@ -53,29 +54,29 @@ export class UsersResolver {
 
   @Query(() => UserType)
   public async me(@CurrentUser() userId: number): Promise<UserEntity> {
-    return this.usersService.getUserById(userId);
+    return this.usersService.userById(userId);
   }
 
   //____________________ PUBLIC QUERIES ____________________
-  /*
-          Useful for social media style apps where user haves descriptions
-          and profiles, I haven't implemented a profile in the user entity
-          but these are just example queries in case you implement one of
-          your own
-        */
 
   @Public()
   @Query(() => UserType)
-  public async getUser(@Args() dto: GetUserDto): Promise<UserEntity> {
-    return this.usersService.getUserByUsername(dto.username);
+  public async userByUsername(@Args() dto: GetUserDto): Promise<UserEntity> {
+    return this.usersService.userByUsername(dto.username);
+  }
+
+  @Public()
+  @Query(() => UserType)
+  public async userById(@Args() dto: UserDto): Promise<UserEntity> {
+    return this.usersService.userById(dto.userId);
   }
 
   @Public()
   @Query(() => PaginatedUsersType)
-  public async findUsers(
+  public async filterUsers(
     @Args() dto: SearchDto,
   ): Promise<IPaginated<UserEntity>> {
-    return this.usersService.findUsers(dto);
+    return this.usersService.filterUsers(dto);
   }
 
   //____________________ RESOLVE FIELDS ____________________

@@ -216,7 +216,7 @@ describe('AuthService', () => {
       expect(message1.message).toBe(
         'Two factor authentication activated successfully',
       );
-      const { twoFactor } = await usersService.getUserById(userId);
+      const { twoFactor } = await usersService.userById(userId);
       expect(twoFactor).toBe(true);
 
       jest
@@ -299,7 +299,7 @@ describe('AuthService', () => {
       expect(message2).toBeInstanceOf(LocalMessageType);
       expect(message2.message).toBe(resetToken);
 
-      user = await usersService.getUserById(userId);
+      user = await usersService.userById(userId);
       const count = user.credentials.version;
       await expect(
         authService.resetPassword({
@@ -325,14 +325,14 @@ describe('AuthService', () => {
       expect(message.message).toBe('Password reseted successfully');
 
       const { id } = await verifyAuthToken(resetToken, 'resetPassword');
-      user = await usersService.getUserById(id);
+      user = await usersService.userById(id);
       expect(user.credentials.version).toBeGreaterThan(count);
     });
   });
 
   describe('Update Auth Credentials', () => {
     it('updatePassword', async () => {
-      let user = await usersService.getUserById(userId);
+      let user = await usersService.userById(userId);
       const count = user.credentials.version;
 
       await expect(
@@ -365,12 +365,12 @@ describe('AuthService', () => {
       expect(auth.accessToken).toBeDefined();
 
       const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      user = await usersService.getUserById(id);
+      user = await usersService.userById(id);
       expect(user.credentials.version).toBeGreaterThan(count);
     });
 
     it('updateEmail', async () => {
-      let user = await usersService.getUserById(userId);
+      let user = await usersService.userById(userId);
       const count = user.credentials.version;
       await expect(
         authService.updateEmail(response as any, userId, {
@@ -391,7 +391,7 @@ describe('AuthService', () => {
       });
 
       const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      user = await usersService.getUserById(id);
+      user = await usersService.userById(id);
       expect(user.credentials.version).toBeGreaterThan(count);
     });
 
@@ -413,7 +413,7 @@ describe('AuthService', () => {
           .spyOn(authService, 'generateWsSession')
           .mockImplementationOnce(async (accessToken) => {
             const { id } = await verifyAuthToken(accessToken, 'access');
-            const user = await usersService.getUserById(id);
+            const user = await usersService.userById(id);
             const userUuid = v5(
               user.id.toString(),
               configService.get<string>('WS_UUID'),
