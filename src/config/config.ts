@@ -48,7 +48,7 @@ export function config(): IConfig {
     },
     bucketData: {
       name: process.env.BUCKET_NAME,
-      url: `https://${process.env.BUCKET_NAME}.${bucketBase}`,
+      url: `https://${process.env.BUCKET_NAME}.${bucketBase}/`,
     },
     db: testing
       ? {
