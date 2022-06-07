@@ -126,7 +126,6 @@ describe('UsersService', () => {
         });
 
       const paginated = await usersService.filterUsers({
-        search: 'a',
         order: QueryOrderEnum.DESC,
         cursor: QueryCursorEnum.DATE,
         first: 20,
@@ -134,7 +133,24 @@ describe('UsersService', () => {
 
       expect(paginated.edges.length).toBeDefined();
       expect(paginated.pageInfo).toBeDefined();
-      expect(paginated.currentCount).toBeDefined();
+      expect(paginated.currentCount).toBeGreaterThanOrEqual(50);
+      expect(paginated.previousCount).toBe(0);
+      expect(paginated.pageInfo.hasNextPage).toBe(true);
+      expect(paginated.pageInfo.hasPreviousPage).toBe(false);
+
+      const paginated2 = await usersService.filterUsers({
+        order: QueryOrderEnum.DESC,
+        cursor: QueryCursorEnum.DATE,
+        first: 10,
+        after: paginated.pageInfo.endCursor,
+      });
+
+      expect(paginated2.edges.length).toBeDefined();
+      expect(paginated2.pageInfo).toBeDefined();
+      expect(paginated2.currentCount).toBeGreaterThanOrEqual(30);
+      expect(paginated2.previousCount).toBe(20);
+      expect(paginated2.pageInfo.hasNextPage).toBe(true);
+      expect(paginated2.pageInfo.hasPreviousPage).toBe(true);
 
       idToDelete = paginated.edges[0]?.node.id;
     });
