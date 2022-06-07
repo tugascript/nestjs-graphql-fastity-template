@@ -154,6 +154,7 @@ export class CommonService {
     innerCursor?: string,
   ): Promise<IPaginated<T>> {
     const strCursor = String(cursor); // because of runtime issues
+    const aliasCursor = `${alias}.${strCursor}`;
     let prevCount = 0;
 
     if (after) {
@@ -163,7 +164,7 @@ export class CommonService {
       tempQb.andWhere(
         CommonService.getFilters(cursor, decoded, oppositeOd, innerCursor),
       );
-      prevCount = await tempQb.count(`${alias}.${strCursor}`, true);
+      prevCount = await tempQb.count(aliasCursor);
 
       const normalOd = getQueryOrder(order);
       qb.andWhere(
@@ -174,7 +175,7 @@ export class CommonService {
     const cqb = qb.clone();
     const [count, entities]: [number, T[]] = await this.throwInternalError(
       Promise.all([
-        cqb.count(strCursor),
+        cqb.count(aliasCursor),
         qb
           .select(`${alias}.*`)
           .orderBy(CommonService.getOrderBy(cursor, order, innerCursor))
