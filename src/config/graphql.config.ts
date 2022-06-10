@@ -70,7 +70,13 @@ export class GqlConfigService implements GqlOptionsFactory {
       routes: true,
       subscription: {
         fullWsTransport: true,
-        emitter: this.testing ? undefined : mqRedis(this.redisOpt),
+        emitter: this.testing
+          ? undefined
+          : mqRedis({
+              port: this.redisOpt.port,
+              host: this.redisOpt.host,
+              password: this.redisOpt.password,
+            }),
         onConnect: async (info): Promise<{ ws: IWsCtx } | false> => {
           const { authorization }: IWsParams = info.payload;
 

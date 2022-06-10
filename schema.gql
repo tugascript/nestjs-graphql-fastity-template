@@ -8,8 +8,10 @@ type Message {
 }
 
 type PageInfo {
+  startCursor: String!
   endCursor: String!
   hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
 }
 
 type User {
@@ -39,27 +41,27 @@ type UserTypePageEdge {
 }
 
 type PaginatedUsers {
-  totalCount: Int!
+  previousCount: Int!
+  currentCount: Int!
   edges: [UserTypePageEdge!]!
   pageInfo: PageInfo!
 }
 
 type Query {
   me: User!
-  getUser(username: String!): User!
-  findUsers(after: String, first: Int = 10, search: String, cursor: UsersCursor = DATE, order: QueryOrder = DESC): PaginatedUsers!
+  userByUsername(username: String!): User!
+  userById(userId: Int!): User!
+  filterUsers(cursor: QueryCursor = DATE, order: QueryOrder = DESC, after: String, first: Int = 10, search: String): PaginatedUsers!
 }
 
-enum UsersCursor {
+enum QueryCursor {
   DATE
-  ALPHABET
+  ALPHA
 }
 
 enum QueryOrder {
   ASC
   DESC
-  asc
-  desc
 }
 
 type Mutation {

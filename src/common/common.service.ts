@@ -164,7 +164,7 @@ export class CommonService {
       tempQb.andWhere(
         CommonService.getFilters(cursor, decoded, oppositeOd, innerCursor),
       );
-      prevCount = await tempQb.count(aliasCursor);
+      prevCount = await tempQb.count(aliasCursor, true);
 
       const normalOd = getQueryOrder(order);
       qb.andWhere(
@@ -175,7 +175,7 @@ export class CommonService {
     const cqb = qb.clone();
     const [count, entities]: [number, T[]] = await this.throwInternalError(
       Promise.all([
-        cqb.count(aliasCursor),
+        cqb.count(aliasCursor, true),
         qb
           .select(`${alias}.*`)
           .orderBy(CommonService.getOrderBy(cursor, order, innerCursor))
