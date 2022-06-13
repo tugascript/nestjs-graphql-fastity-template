@@ -17,7 +17,11 @@ import {
   Length,
   Matches,
 } from 'class-validator';
-import { NAME_REGEX, SLUG_REGEX } from '../../common/constants/regex';
+import {
+  BCRYPT_HASH,
+  NAME_REGEX,
+  SLUG_REGEX,
+} from '../../common/constants/regex';
 import { LocalBaseEntity } from '../../common/entities/base.entity';
 import { CredentialsEmbeddable } from '../embeddables/credentials.embeddable';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
@@ -60,8 +64,10 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @IsUrl()
   public picture?: string;
 
-  @Property()
+  @Property({ columnType: 'varchar(60)' })
   @IsString()
+  @Length(59, 60)
+  @Matches(BCRYPT_HASH)
   public password!: string;
 
   @Enum({
