@@ -25,7 +25,48 @@ import { IEdge, IPaginated } from './interfaces/paginated.interface';
 export class CommonService {
   //-------------------- Cursor Pagination --------------------
 
-  private readonly buff = Buffer;
+  /**
+   * Encode Cursor
+   *
+   * Takes a date, string or number and returns the base 64
+   * representation of it
+   */
+  private static encodeCursor(val: Date | string | number): string {
+    let str: string;
+
+    if (val instanceof Date) {
+      str = val.getTime().toString();
+    } else if (typeof val === 'number' || typeof val === 'bigint') {
+      str = val.toString();
+    } else {
+      str = val;
+    }
+
+    return Buffer.from(str, 'utf-8').toString('base64');
+  }
+
+  /**
+   * Create Edge
+   *
+   * Takes an instance, the cursor key and a innerCursor,
+   * and generates a GraphQL edge
+   */
+  private static createEdge<T>(
+    instance: T,
+    cursor: keyof T,
+    innerCursor?: string,
+  ): IEdge<T> {
+    try {
+      return {
+        node: instance,
+        cursor: CommonService.encodeCursor(
+          innerCursor ? instance[cursor][innerCursor] : instance[cursor],
+        ),
+      };
+    } catch (_) {
+      throw new InternalServerErrorException('The given cursor is invalid');
+    }
+  }
 
   /**
    * Get Order By
@@ -74,6 +115,8 @@ export class CommonService {
         };
   }
 
+  //-------------------- Repository Pagination --------------------
+
   /**
    * Paginate
    *
@@ -103,7 +146,9 @@ export class CommonService {
 
     if (len > 0) {
       for (let i = 0; i < len; i++) {
-        pages.edges.push(this.createEdge(instances[i], cursor, innerCursor));
+        pages.edges.push(
+          CommonService.createEdge(instances[i], cursor, innerCursor),
+        );
       }
       pages.pageInfo.startCursor = pages.edges[0].cursor;
       pages.pageInfo.endCursor = pages.edges[len - 1].cursor;
@@ -114,13 +159,15 @@ export class CommonService {
     return pages;
   }
 
+  //-------------------- Notification Generation --------------------
+
   /**
    * Decode Cursor
    *
    * Takes a base64 cursor and returns the string or number value
    */
   public decodeCursor(cursor: string, isNum = false): string | number {
-    const str = this.buff.from(cursor, 'base64').toString('utf-8');
+    const str = Buffer.from(cursor, 'base64').toString('utf-8');
 
     if (isNum) {
       const num = parseInt(str, 10);
@@ -136,7 +183,7 @@ export class CommonService {
     return str;
   }
 
-  //-------------------- Repository Pagination --------------------
+  //-------------------- String Formatting --------------------
 
   /**
    * Query Builder Pagination
@@ -194,8 +241,6 @@ export class CommonService {
     );
   }
 
-  //-------------------- Notification Generation --------------------
-
   /**
    * Generate Notification
    *
@@ -208,12 +253,10 @@ export class CommonService {
     innerCursor?: string,
   ): INotification<T> {
     return {
-      edge: this.createEdge(entity, cursor, innerCursor),
+      edge: CommonService.createEdge(entity, cursor, innerCursor),
       type: nType,
     };
   }
-
-  //-------------------- String Formatting --------------------
 
   /**
    * Format Title
@@ -241,6 +284,8 @@ export class CommonService {
       .toLowerCase()}%`;
   }
 
+  //-------------------- Entity Validations --------------------
+
   /**
    * Generate Point Slug
    *
@@ -262,7 +307,7 @@ export class CommonService {
     });
   }
 
-  //-------------------- Entity Validations --------------------
+  //-------------------- Entity Actions --------------------
 
   /**
    * Check Existence
@@ -285,7 +330,7 @@ export class CommonService {
       throw new BadRequestException('Entity validation failed');
   }
 
-  //-------------------- Entity Actions --------------------
+  //-------------------- Error Handling --------------------
 
   /**
    * Save Entity
@@ -316,7 +361,7 @@ export class CommonService {
     await this.throwInternalError(repo.removeAndFlush(entity));
   }
 
-  //-------------------- Error Handling --------------------
+  //-------------------- Private Methods --------------------
 
   /**
    * Throw Duplicate Error
@@ -345,50 +390,5 @@ export class CommonService {
     } catch (error) {
       throw new InternalServerErrorException(error);
     }
-  }
-
-  //-------------------- Private Methods --------------------
-
-  /**
-   * Create Edge
-   *
-   * Takes an instance, the cursor key and a innerCursor,
-   * and generates a GraphQL edge
-   */
-  private createEdge<T>(
-    instance: T,
-    cursor: keyof T,
-    innerCursor?: string,
-  ): IEdge<T> {
-    try {
-      return {
-        node: instance,
-        cursor: this.encodeCursor(
-          innerCursor ? instance[cursor][innerCursor] : instance[cursor],
-        ),
-      };
-    } catch (_) {
-      throw new InternalServerErrorException('The given cursor is invalid');
-    }
-  }
-
-  /**
-   * Encode Cursor
-   *
-   * Takes a date, string or number and returns the base 64
-   * representation of it
-   */
-  private encodeCursor(val: Date | string | number): string {
-    let str: string;
-
-    if (val instanceof Date) {
-      str = val.getTime().toString();
-    } else if (typeof val === 'number' || typeof val === 'bigint') {
-      str = val.toString();
-    } else {
-      str = val;
-    }
-
-    return this.buff.from(str, 'utf-8').toString('base64');
   }
 }
