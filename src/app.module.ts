@@ -31,7 +31,6 @@ import { LoadersModule } from './loaders/loaders.module';
     }),
     CacheModule.registerAsync({
       isGlobal: true,
-      imports: [ConfigModule],
       useClass: CacheConfig,
     }),
     GraphQLModule.forRootAsync({
