@@ -34,7 +34,7 @@ export class GraphQLDriver extends MercuriusDriver {
     const app = httpAdapter.getInstance<NestFastifyApplication>();
     const plugins = options.plugins;
     delete options.plugins;
-    await app.register(mercurius, {
+    await app.register(mercurius as any, {
       ...options,
     });
     await addPlugins(app, plugins);

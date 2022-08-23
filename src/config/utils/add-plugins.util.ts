@@ -8,7 +8,7 @@ export async function addPlugins(
   if (plugins && plugins.length > 0) {
     for (let i = 0; i < plugins.length; i++) {
       const plugin = plugins[i];
-      await app.register(plugin.plugin, plugin.options);
+      await app.register(plugin.plugin as any, plugin.options);
     }
   }
 }

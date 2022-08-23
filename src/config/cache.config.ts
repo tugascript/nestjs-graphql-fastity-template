@@ -19,9 +19,7 @@ export class CacheConfig implements CacheOptionsFactory {
       : {
           ttl,
           store: ioredisStore,
-          redisInstance: new Redis(
-            this.configService.get<RedisOptions>('redis'),
-          ),
+          redis: new Redis(this.configService.get<RedisOptions>('redis')),
         };
   }
 }
