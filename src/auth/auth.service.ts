@@ -617,7 +617,7 @@ export class AuthService {
       httpOnly: true,
       signed: true,
       path: '/api/auth/refresh-access',
-      expires: new Date(Date.now() + this.refreshTime),
+      expires: new Date(Date.now() + this.refreshTime * 1000),
     });
   }
 
