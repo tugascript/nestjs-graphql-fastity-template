@@ -4,7 +4,7 @@
 
 Full [NodeJS](https://nodejs.org/en/) boilerplate of a [NestJS](https://nestjs.com/) [GraphQL](https://graphql.org/)
 monolithic
-backend API using [PostgreSQL](https://www.postgresql.org/) as a the database.
+backend API using [PostgreSQL](https://www.postgresql.org/) as the database.
 
 ## Technologies
 
