@@ -20,7 +20,7 @@ import { UserEntity } from '../users/entities/user.entity';
 import { OnlineStatusEnum } from '../users/enums/online-status.enum';
 import { UsersService } from '../users/users.service';
 import { ChangeEmailDto } from './dtos/change-email.dto';
-import { ChangePasswordDto } from './dtos/change-password.input';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
 import { ConfirmLoginDto } from './dtos/confirm-login.dto';
 import { LoginDto } from './dtos/login.dto';

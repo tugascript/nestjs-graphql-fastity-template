@@ -80,7 +80,7 @@ export class UsersResolver {
   }
 
   @Public()
-  @Query(() => PaginatedUsersType)
+  @Query(() => PaginatedUsersType, { name: 'users' })
   public async filterUsers(
     @Args() dto: SearchDto,
   ): Promise<IPaginated<UserEntity>> {

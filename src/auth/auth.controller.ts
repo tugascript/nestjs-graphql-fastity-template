@@ -5,7 +5,7 @@ import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ChangeEmailDto } from './dtos/change-email.dto';
-import { ChangePasswordDto } from './dtos/change-password.input';
+import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
 import { ConfirmLoginDto } from './dtos/confirm-login.dto';
 import { LoginDto } from './dtos/login.dto';
