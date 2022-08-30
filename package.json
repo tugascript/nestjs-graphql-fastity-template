@@ -38,7 +38,6 @@
     "@nestjs/mercurius": "^10.0.22",
     "@nestjs/platform-fastify": "^9.0.11",
     "@nestjs/throttler": "^3.0.0",
-    "add": "^2.0.6",
     "altair-fastify-plugin": "^4.6.4",
     "bcrypt": "^5.0.1",
     "cache-manager": "^4.1.0",
