@@ -2,18 +2,6 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
-type Message {
-  id: ID!
-  message: String!
-}
-
-type PageInfo {
-  startCursor: String!
-  endCursor: String!
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-}
-
 type User {
   id: Int!
   createdAt: String!
@@ -23,6 +11,8 @@ type User {
   email: String
   picture: String
   onlineStatus: OnlineStatus!
+  defaultStatus: OnlineStatus
+  twoFactor: Boolean
   lastOnline: String!
 }
 
@@ -35,7 +25,19 @@ enum OnlineStatus {
   OFFLINE
 }
 
-type UserTypePageEdge {
+type Message {
+  id: ID!
+  message: String!
+}
+
+type PageInfo {
+  startCursor: String!
+  endCursor: String!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+}
+
+type UserEntityPageEdge {
   cursor: String!
   node: User!
 }
@@ -43,8 +45,24 @@ type UserTypePageEdge {
 type PaginatedUsers {
   previousCount: Int!
   currentCount: Int!
-  edges: [UserTypePageEdge!]!
+  edges: [UserEntityPageEdge!]!
   pageInfo: PageInfo!
+}
+
+type UserEntityNotificationEdge {
+  cursor: String!
+  node: User!
+}
+
+type UserNotification {
+  type: NotificationType!
+  edge: UserEntityNotificationEdge!
+}
+
+enum NotificationType {
+  NEW
+  UPDATE
+  DELETE
 }
 
 type Query {
@@ -66,9 +84,13 @@ enum QueryOrder {
 
 type Mutation {
   updateProfilePicture(picture: Upload!): User!
-  updateOnlineStatus(defaultStatus: OnlineStatus!): Message!
+  updateOnlineStatus(defaultStatus: OnlineStatus!): User!
   deleteAccount(password: String!): Message!
 }
 
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
+
+type Subscription {
+  userNotification(userId: Int): UserNotification!
+}

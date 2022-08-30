@@ -6,6 +6,7 @@ import {
   OptionalProps,
   Property,
 } from '@mikro-orm/core';
+import { Field, ObjectType } from '@nestjs/graphql';
 import {
   IsBoolean,
   IsDate,
@@ -27,6 +28,7 @@ import { CredentialsEmbeddable } from '../embeddables/credentials.embeddable';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
 import { IUser } from '../interfaces/user.interface';
 
+@ObjectType('User')
 @Entity({ tableName: 'users' })
 export class UserEntity extends LocalBaseEntity implements IUser {
   [OptionalProps]?:
@@ -43,22 +45,26 @@ export class UserEntity extends LocalBaseEntity implements IUser {
     | 'lastLogin'
     | 'lastOnline';
 
+  @Field(() => String)
   @Property({ columnType: 'varchar(100)' })
   @IsString()
   @Length(3, 100)
   @Matches(NAME_REGEX)
   public name!: string;
 
+  @Field(() => String)
   @Property({ columnType: 'varchar(110)', unique: true })
   @IsString()
   @Length(3, 110)
   @Matches(SLUG_REGEX)
   public username!: string;
 
+  @Field(() => String, { nullable: true })
   @Property({ columnType: 'varchar(255)', unique: true })
   @IsEmail()
   public email!: string;
 
+  @Field(() => String, { nullable: true })
   @Property({ columnType: 'varchar(255)', nullable: true })
   @IsOptional()
   @IsUrl()
@@ -70,6 +76,7 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @Matches(BCRYPT_HASH)
   public password!: string;
 
+  @Field(() => OnlineStatusEnum)
   @Enum({
     items: () => OnlineStatusEnum,
     default: OnlineStatusEnum.OFFLINE,
@@ -78,6 +85,7 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @IsEnum(OnlineStatusEnum)
   public onlineStatus: OnlineStatusEnum = OnlineStatusEnum.OFFLINE;
 
+  @Field(() => OnlineStatusEnum, { nullable: true })
   @Enum({
     items: () => OnlineStatusEnum,
     default: OnlineStatusEnum.ONLINE,
@@ -94,6 +102,7 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @IsBoolean()
   public suspended: boolean = false;
 
+  @Field(() => Boolean, { nullable: true })
   @Property({ default: false })
   @IsBoolean()
   public twoFactor: boolean = false;
@@ -105,6 +114,7 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @IsDate()
   public lastLogin: Date = new Date();
 
+  @Field(() => String)
   @Property()
   @IsDate()
   public lastOnline: Date = new Date();

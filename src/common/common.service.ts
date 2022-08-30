@@ -10,6 +10,7 @@ import {
 import { validate } from 'class-validator';
 import slugify from 'slugify';
 import { v4 as uuidV4 } from 'uuid';
+import { CursorTypeEnum } from './enums/cursor-type.enum';
 import { NotificationTypeEnum } from './enums/notification-type.enum';
 import {
   getOppositeOrder,
@@ -96,7 +97,7 @@ export class CommonService {
    */
   private static getFilters<T>(
     cursor: keyof T,
-    decoded: string | number,
+    decoded: string | number | Date,
     order: tOrderEnum | tOppositeOrder,
     innerCursor?: string,
   ): FilterQuery<Dictionary<T>> {
@@ -166,21 +167,35 @@ export class CommonService {
    *
    * Takes a base64 cursor and returns the string or number value
    */
-  public decodeCursor(cursor: string, isNum = false): string | number {
+  public decodeCursor(
+    cursor: string,
+    cursorType: CursorTypeEnum = CursorTypeEnum.STRING,
+  ): string | number | Date {
     const str = Buffer.from(cursor, 'base64').toString('utf-8');
 
-    if (isNum) {
-      const num = parseInt(str, 10);
+    switch (cursorType) {
+      case CursorTypeEnum.DATE:
+        const milliUnix = parseInt(str, 10);
 
-      if (isNaN(num))
-        throw new BadRequestException(
-          'Cursor does not reference a valid number',
-        );
+        if (isNaN(milliUnix))
+          throw new BadRequestException(
+            'Cursor does not reference a valid date',
+          );
 
-      return num;
+        return new Date(milliUnix);
+      case CursorTypeEnum.NUMBER:
+        const num = parseInt(str, 10);
+
+        if (isNaN(num))
+          throw new BadRequestException(
+            'Cursor does not reference a valid number',
+          );
+
+        return num;
+      case CursorTypeEnum.STRING:
+      default:
+        return str;
     }
-
-    return str;
   }
 
   //-------------------- String Formatting --------------------
@@ -197,7 +212,7 @@ export class CommonService {
     order: QueryOrderEnum,
     qb: QueryBuilder<T>,
     after?: string,
-    afterIsNum = false,
+    cursorType = CursorTypeEnum.STRING,
     innerCursor?: string,
   ): Promise<IPaginated<T>> {
     const strCursor = String(cursor); // because of runtime issues
@@ -205,7 +220,7 @@ export class CommonService {
     let prevCount = 0;
 
     if (after) {
-      const decoded = this.decodeCursor(after, afterIsNum);
+      const decoded = this.decodeCursor(after, cursorType);
       const oppositeOd = getOppositeOrder(order);
       const tempQb = qb.clone();
       tempQb.andWhere(
@@ -235,6 +250,61 @@ export class CommonService {
       entities,
       count,
       prevCount,
+      cursor,
+      first,
+      innerCursor,
+    );
+  }
+
+  /**
+   * Find And Count Pagination
+   *
+   * Takes an entity repository and a FilterQuery and returns the paginated
+   * entities
+   */
+  public async findAndCountPagination<T>(
+    cursor: keyof T,
+    first: number,
+    order: QueryOrderEnum,
+    repo: EntityRepository<T>,
+    where: FilterQuery<T>,
+    after?: string,
+    afterCursor: CursorTypeEnum = CursorTypeEnum.STRING,
+    innerCursor?: string,
+  ): Promise<IPaginated<T>> {
+    let previousCount = 0;
+
+    if (after) {
+      const decoded = this.decodeCursor(after, afterCursor);
+      const queryOrder = getQueryOrder(order);
+      const oppositeOrder = getOppositeOrder(order);
+      const countWhere = where;
+      countWhere['$and'] = CommonService.getFilters(
+        'createdAt',
+        decoded,
+        oppositeOrder,
+        innerCursor,
+      );
+      previousCount = await repo.count(countWhere);
+      where['$and'] = CommonService.getFilters(
+        'createdAt',
+        decoded,
+        queryOrder,
+        innerCursor,
+      );
+    }
+
+    const [entities, count] = await this.throwInternalError(
+      repo.findAndCount(where, {
+        orderBy: CommonService.getOrderBy(cursor, order, innerCursor),
+        limit: first,
+      }),
+    );
+
+    return this.paginate(
+      entities,
+      count,
+      previousCount,
       cursor,
       first,
       innerCursor,

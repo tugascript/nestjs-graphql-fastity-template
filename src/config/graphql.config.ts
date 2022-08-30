@@ -10,11 +10,11 @@ import mercuriusCache, { MercuriusCacheOptions } from 'mercurius-cache';
 import mqRedis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { IGqlCtx } from '../common/interfaces/gql-ctx.interface';
+import { LoadersService } from '../loaders/loaders.service';
 import { MercuriusDriverPlugin } from './interfaces/mercurius-driver-plugin.interface';
 import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
-import { LoadersService } from '../loaders/loaders.service';
 
 @Injectable()
 export class GqlConfigService implements GqlOptionsFactory {
@@ -84,7 +84,7 @@ export class GqlConfigService implements GqlOptionsFactory {
 
           const authArr = authorization.split(' ');
 
-          if (authArr[0] !== 'Bearer') return false;
+          if (authArr.length !== 2 && authArr[0] !== 'Bearer') return false;
 
           try {
             const [userId, sessionId] =

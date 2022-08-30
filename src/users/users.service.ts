@@ -10,20 +10,24 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
+import { PubSub } from 'mercurius';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { RegisterDto } from '../auth/dtos/register.dto';
 import { ISessionsData } from '../auth/interfaces/sessions-data.interface';
 import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
-import { LocalMessageType } from '../common/gql-types/message.type';
+import { SearchDto } from '../common/dtos/search.dto';
+import { LocalMessageType } from '../common/entities/gql/message.type';
+import { getCursorType } from '../common/enums/cursor-type.enum';
+import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
+import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
+import { RatioEnum } from '../common/enums/ratio.enum';
 import { IPaginated } from '../common/interfaces/paginated.interface';
 import { UploaderService } from '../uploader/uploader.service';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
 import { UserEntity } from './entities/user.entity';
-import { SearchDto } from '../common/dtos/search.dto';
-import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
-import { RatioEnum } from '../common/enums/ratio.enum';
+import { IUserNotification } from './interfaces/user-notification.interface';
 
 @Injectable()
 export class UsersService {
@@ -57,6 +61,7 @@ export class UsersService {
     if (password1 !== password2)
       throw new BadRequestException('Passwords do not match');
 
+    email = email.toLowerCase();
     name = this.commonService.formatTitle(name);
     const password = await hash(password1, 10);
     let username = this.commonService.generatePointSlug(name);
@@ -88,6 +93,7 @@ export class UsersService {
    * the old one if it exits
    */
   public async updateProfilePicture(
+    pubsub: PubSub,
     userId: number,
     { picture }: ProfilePictureDto,
   ): Promise<UserEntity> {
@@ -103,6 +109,7 @@ export class UsersService {
     if (toDelete) await this.uploaderService.deleteFile(toDelete);
 
     await this.saveUserToDb(user);
+    this.publishUserNotification(pubsub, user, NotificationTypeEnum.UPDATE);
     return user;
   }
 
@@ -112,12 +119,12 @@ export class UsersService {
    * Updates the default online status of current user
    */
   public async updateDefaultStatus(
+    pubsub: PubSub,
     userId: number,
     { defaultStatus }: OnlineStatusDto,
-  ): Promise<LocalMessageType> {
+  ): Promise<UserEntity> {
     const user = await this.userById(userId);
     user.defaultStatus = defaultStatus;
-
     const userUuid = uuidV5(userId.toString(), this.wsNamespace);
     const sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionsData>(userUuid),
@@ -130,10 +137,11 @@ export class UsersService {
           ttl: this.wsAccessTime,
         }),
       );
+      this.publishUserNotification(pubsub, user, NotificationTypeEnum.UPDATE);
     }
 
     await this.saveUserToDb(user);
-    return new LocalMessageType('Default status changed successfully');
+    return user;
   }
 
   /**
@@ -166,6 +174,7 @@ export class UsersService {
    * Gets a user by email for auth
    */
   public async getUserForAuth(email: string): Promise<UserEntity> {
+    email = email.toLowerCase();
     const user = await this.usersRepository.findOne({ email });
     if (!user) throw new UnauthorizedException('Invalid credentials');
     return user;
@@ -179,6 +188,7 @@ export class UsersService {
   public async getUncheckUser(
     email: string,
   ): Promise<UserEntity | undefined | null> {
+    email = email.toLowerCase();
     return this.usersRepository.findOne({ email });
   }
 
@@ -263,6 +273,7 @@ export class UsersService {
       order,
       qb,
       after,
+      getCursorType(cursor),
     );
   }
 
@@ -277,5 +288,22 @@ export class UsersService {
    */
   public async saveUserToDb(user: UserEntity, isNew = false): Promise<void> {
     await this.commonService.saveEntity(this.usersRepository, user, isNew);
+  }
+
+  private publishUserNotification(
+    pubsub: PubSub,
+    user: UserEntity,
+    notificationType: NotificationTypeEnum,
+  ) {
+    pubsub.publish<IUserNotification>({
+      topic: 'USER_NOTIFICATION',
+      payload: {
+        userNotification: this.commonService.generateNotification(
+          user,
+          notificationType,
+          'username',
+        ),
+      },
+    });
   }
 }

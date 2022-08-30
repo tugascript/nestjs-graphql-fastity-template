@@ -1,4 +1,4 @@
-import { LocalMessageType } from '../../common/gql-types/message.type';
+import { LocalMessageType } from '../../common/entities/gql/message.type';
 
 export interface IAuthResult {
   accessToken: string;

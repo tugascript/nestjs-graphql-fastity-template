@@ -1,13 +1,15 @@
+import { faker } from '@faker-js/faker';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { CACHE_MANAGER, CacheModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
+import dayjs from 'dayjs';
 import { v4, v5 } from 'uuid';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
-import { LocalMessageType } from '../../common/gql-types/message.type';
+import { LocalMessageType } from '../../common/entities/gql/message.type';
 import { config } from '../../config/config';
 import { IJwt, ISingleJwt } from '../../config/interfaces/jwt.interface';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
@@ -22,13 +24,11 @@ import {
   IAccessPayloadResponse,
 } from '../interfaces/access-payload.interface';
 import { IAuthResult } from '../interfaces/auth-result.interface';
+import { ISessionsData } from '../interfaces/sessions-data.interface';
 import {
   ITokenPayload,
   ITokenPayloadResponse,
 } from '../interfaces/token-payload.interface';
-import { faker } from '@faker-js/faker';
-import { ISessionsData } from '../interfaces/sessions-data.interface';
-import dayjs from 'dayjs';
 
 class ResponseMock {
   public cookies = '';
@@ -40,7 +40,7 @@ class ResponseMock {
   }
 }
 
-const NAME = faker.name.findName();
+const NAME = faker.name.fullName();
 const EMAIL = faker.internet.email();
 const NEW_EMAIL = faker.internet.email();
 const PASSWORD = 'Ab123456';
@@ -222,6 +222,7 @@ describe('AuthService', () => {
       jest
         .spyOn(authService, 'loginUser')
         .mockImplementationOnce(async (_, { email, password }) => {
+          email = email.toLowerCase();
           const user = await usersService.getUserForAuth(email);
 
           if (!(await compare(password, user.password)))

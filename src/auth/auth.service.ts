@@ -12,7 +12,7 @@ import dayjs from 'dayjs';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { CommonService } from '../common/common.service';
-import { LocalMessageType } from '../common/gql-types/message.type';
+import { LocalMessageType } from '../common/entities/gql/message.type';
 import { IJwt, ISingleJwt } from '../config/interfaces/jwt.interface';
 import { IWsCtx } from '../config/interfaces/ws-ctx.interface';
 import { EmailService } from '../email/email.service';
@@ -133,6 +133,7 @@ export class AuthService {
     res: FastifyReply,
     { email, password }: LoginDto,
   ): Promise<IAuthResult | LocalMessageType> {
+    email = email.toLowerCase();
     const user = await this.usersService.getUserForAuth(email);
     const currentPassword = user.password;
     const { lastPassword, updatedAt } = user.credentials;
@@ -230,6 +231,7 @@ export class AuthService {
     res: FastifyReply,
     { email, accessCode }: ConfirmLoginDto,
   ): Promise<IAuthResult> {
+    email = email.toLowerCase();
     const hashedCode = await this.commonService.throwInternalError(
       this.cacheManager.get<string>(uuidV5(email, this.authNamespace)),
     );
@@ -303,6 +305,7 @@ export class AuthService {
   public async sendResetPasswordEmail({
     email,
   }: ResetEmailDto): Promise<LocalMessageType> {
+    email = email.toLowerCase();
     const user = await this.usersService.getUncheckUser(email);
 
     if (user) {
@@ -370,6 +373,7 @@ export class AuthService {
     userId: number,
     { email, password }: ChangeEmailDto,
   ): Promise<IAuthResult> {
+    email = email.toLowerCase();
     const user = await this.usersService.userById(userId);
 
     if (!(await compare(password, user.password)))

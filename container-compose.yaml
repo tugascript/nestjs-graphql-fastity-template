@@ -3,7 +3,7 @@ services:
   redis:
     container_name: redis
     image: 'redis:alpine'
-    command: redis-server --requirepass password
+    command: redis-server
     ports:
       - '6379:6379'
 
@@ -12,7 +12,6 @@ services:
     image: rediscommander/redis-commander:latest
     environment:
       - REDIS_HOSTS=local:redis:6379
-      - REDIS_PASSWORD=password
     ports:
       - '8081:8081'
     depends_on:

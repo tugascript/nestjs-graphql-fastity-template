@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommonService } from '../common.service';
+import { CursorTypeEnum } from '../enums/cursor-type.enum';
 
 interface IData {
   id: number;
@@ -10,7 +11,7 @@ interface IData {
 
 const data: IData[] = new Array(50).fill(null).map((_, i) => ({
   id: i + 1,
-  name: faker.name.findName(),
+  name: faker.name.fullName(),
   email: faker.internet.email(),
 }));
 
@@ -30,7 +31,9 @@ describe('CommonService', () => {
       const paged = service.paginate(data.slice(0, 15), 50, 0, 'id', 15);
       const first = paged.edges[0];
       expect(first.cursor).toBe(Buffer.from('1', 'utf-8').toString('base64'));
-      expect(service.decodeCursor(paged.pageInfo.endCursor, true)).toBe(15);
+      expect(
+        service.decodeCursor(paged.pageInfo.endCursor, CursorTypeEnum.NUMBER),
+      ).toBe(15);
       expect(paged.pageInfo.hasNextPage).toBe(true);
       expect(paged.pageInfo.hasPreviousPage).toBe(false);
       expect(paged.pageInfo.startCursor).toBe(first.cursor);
@@ -44,7 +47,9 @@ describe('CommonService', () => {
       const first = paged.edges[0];
 
       expect(first.cursor).toBe(Buffer.from('40', 'utf-8').toString('base64'));
-      expect(service.decodeCursor(paged.pageInfo.endCursor, true)).toBe(50);
+      expect(
+        service.decodeCursor(paged.pageInfo.endCursor, CursorTypeEnum.NUMBER),
+      ).toBe(50);
       expect(paged.pageInfo.hasNextPage).toBe(false);
       expect(paged.pageInfo.hasPreviousPage).toBe(true);
     });
