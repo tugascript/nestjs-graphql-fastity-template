@@ -4070,85 +4070,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"backend@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "backend@workspace:."
-  dependencies:
-    "@aws-sdk/client-s3": ^3.161.0
-    "@aws-sdk/signature-v4-crt": ^3.160.0
-    "@faker-js/faker": ^7.5.0
-    "@fastify/cookie": ^8.1.0
-    "@fastify/cors": ^8.1.0
-    "@fastify/csrf-protection": ^5.1.0
-    "@fastify/static": ^6.5.0
-    "@mikro-orm/cli": ^5.3.1
-    "@mikro-orm/core": ^5.3.1
-    "@mikro-orm/nestjs": ^5.1.1
-    "@mikro-orm/postgresql": ^5.3.1
-    "@mikro-orm/sqlite": ^5.3.1
-    "@nestjs/cli": ^9.1.1
-    "@nestjs/common": ^9.0.11
-    "@nestjs/config": ^2.2.0
-    "@nestjs/core": ^9.0.11
-    "@nestjs/graphql": ^10.0.22
-    "@nestjs/mercurius": ^10.0.22
-    "@nestjs/platform-fastify": ^9.0.11
-    "@nestjs/schematics": ^9.0.1
-    "@nestjs/testing": ^9.0.11
-    "@nestjs/throttler": ^3.0.0
-    "@types/bcrypt": ^5.0.0
-    "@types/cache-manager": ^4.0.1
-    "@types/graphql-upload": ^8.0.11
-    "@types/jest": 29.0.0
-    "@types/jsonwebtoken": ^8.5.9
-    "@types/node": ^18.7.14
-    "@types/nodemailer": ^6.4.5
-    "@types/sharp": ^0.30.5
-    "@types/supertest": ^2.0.12
-    "@types/uuid": ^8.3.4
-    "@typescript-eslint/eslint-plugin": ^5.36.1
-    "@typescript-eslint/parser": ^5.36.1
-    add: ^2.0.6
-    altair-fastify-plugin: ^4.6.4
-    bcrypt: ^5.0.1
-    cache-manager: ^4.1.0
-    class-transformer: ^0.5.1
-    class-validator: ^0.13.2
-    dayjs: ^1.11.5
-    eslint: ^8.23.0
-    eslint-config-prettier: ^8.5.0
-    eslint-plugin-prettier: ^4.2.1
-    fastify: ^4.5.3
-    graphql: ^16.6.0
-    handlebars: ^4.7.7
-    ioredis: ^5.2.3
-    jest: ^29.0.1
-    joi: ^17.6.0
-    jsonwebtoken: ^8.5.1
-    mercurius: ^10.5.0
-    mercurius-cache: ^2.0.0
-    mercurius-upload: ^5.0.0
-    mqemitter-redis: ^5.0.0
-    nestjs-throttler-storage-redis: ^0.1.20
-    nodemailer: ^6.7.8
-    prettier: ^2.7.1
-    reflect-metadata: ^0.1.13
-    rimraf: ^3.0.2
-    rxjs: ^7.5.6
-    sharp: ^0.30.7
-    slugify: ^1.6.5
-    source-map-support: ^0.5.21
-    supertest: ^6.2.4
-    ts-jest: ^28.0.8
-    ts-loader: ^9.3.1
-    ts-node: ^10.9.1
-    tsconfig-paths: ^4.1.0
-    typescript: ^4.8.2
-    uuid: ^8.3.2
-    webpack: ^5.74.0
-  languageName: unknown
-  linkType: soft
-
 "backo2@npm:^1.0.2":
   version: 1.0.2
   resolution: "backo2@npm:1.0.2"
@@ -8601,6 +8522,85 @@ __metadata:
   checksum: deac9f8d00eda7b2e5cd1b2549e26e10a0faa70adaa6fdadca701cc55f49ee9018e427f424bac0c790b7c7e2d3068db97f3093f1093975f2acb8f8818b936ed9
   languageName: node
   linkType: hard
+
+"nestjs-graphql-fastify-template@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "nestjs-graphql-fastify-template@workspace:."
+  dependencies:
+    "@aws-sdk/client-s3": ^3.161.0
+    "@aws-sdk/signature-v4-crt": ^3.160.0
+    "@faker-js/faker": ^7.5.0
+    "@fastify/cookie": ^8.1.0
+    "@fastify/cors": ^8.1.0
+    "@fastify/csrf-protection": ^5.1.0
+    "@fastify/static": ^6.5.0
+    "@mikro-orm/cli": ^5.3.1
+    "@mikro-orm/core": ^5.3.1
+    "@mikro-orm/nestjs": ^5.1.1
+    "@mikro-orm/postgresql": ^5.3.1
+    "@mikro-orm/sqlite": ^5.3.1
+    "@nestjs/cli": ^9.1.1
+    "@nestjs/common": ^9.0.11
+    "@nestjs/config": ^2.2.0
+    "@nestjs/core": ^9.0.11
+    "@nestjs/graphql": ^10.0.22
+    "@nestjs/mercurius": ^10.0.22
+    "@nestjs/platform-fastify": ^9.0.11
+    "@nestjs/schematics": ^9.0.1
+    "@nestjs/testing": ^9.0.11
+    "@nestjs/throttler": ^3.0.0
+    "@types/bcrypt": ^5.0.0
+    "@types/cache-manager": ^4.0.1
+    "@types/graphql-upload": ^8.0.11
+    "@types/jest": 29.0.0
+    "@types/jsonwebtoken": ^8.5.9
+    "@types/node": ^18.7.14
+    "@types/nodemailer": ^6.4.5
+    "@types/sharp": ^0.30.5
+    "@types/supertest": ^2.0.12
+    "@types/uuid": ^8.3.4
+    "@typescript-eslint/eslint-plugin": ^5.36.1
+    "@typescript-eslint/parser": ^5.36.1
+    add: ^2.0.6
+    altair-fastify-plugin: ^4.6.4
+    bcrypt: ^5.0.1
+    cache-manager: ^4.1.0
+    class-transformer: ^0.5.1
+    class-validator: ^0.13.2
+    dayjs: ^1.11.5
+    eslint: ^8.23.0
+    eslint-config-prettier: ^8.5.0
+    eslint-plugin-prettier: ^4.2.1
+    fastify: ^4.5.3
+    graphql: ^16.6.0
+    handlebars: ^4.7.7
+    ioredis: ^5.2.3
+    jest: ^29.0.1
+    joi: ^17.6.0
+    jsonwebtoken: ^8.5.1
+    mercurius: ^10.5.0
+    mercurius-cache: ^2.0.0
+    mercurius-upload: ^5.0.0
+    mqemitter-redis: ^5.0.0
+    nestjs-throttler-storage-redis: ^0.1.20
+    nodemailer: ^6.7.8
+    prettier: ^2.7.1
+    reflect-metadata: ^0.1.13
+    rimraf: ^3.0.2
+    rxjs: ^7.5.6
+    sharp: ^0.30.7
+    slugify: ^1.6.5
+    source-map-support: ^0.5.21
+    supertest: ^6.2.4
+    ts-jest: ^28.0.8
+    ts-loader: ^9.3.1
+    ts-node: ^10.9.1
+    tsconfig-paths: ^4.1.0
+    typescript: ^4.8.2
+    uuid: ^8.3.2
+    webpack: ^5.74.0
+  languageName: unknown
+  linkType: soft
 
 "nestjs-throttler-storage-redis@npm:^0.1.20":
   version: 0.1.20
