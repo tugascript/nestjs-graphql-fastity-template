@@ -9,14 +9,14 @@ import { passwordResetEmail } from './templates/password-reset';
 
 @Injectable()
 export class EmailService {
-  constructor(private readonly configService: ConfigService) {}
-
   private readonly transport = createTransport(
     this.configService.get<IEmailConfig>('emailService'),
   );
   private readonly email = `"Your App" <${this.configService.get<string>(
     'EMAIL_USER',
   )}>`;
+
+  constructor(private readonly configService: ConfigService) {}
 
   public async sendConfirmationEmail(
     { name, email }: UserEntity,
@@ -56,11 +56,15 @@ export class EmailService {
     subject: string,
     html: string,
   ): Promise<void> {
-    await this.transport.sendMail({
-      from: this.email,
-      subject,
-      to,
-      html,
-    });
+    try {
+      await this.transport.sendMail({
+        from: this.email,
+        subject,
+        to,
+        html,
+      });
+    } catch (e) {
+      console.log(e);
+    }
   }
 }
