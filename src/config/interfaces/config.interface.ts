@@ -9,7 +9,6 @@ import { IJwt } from './jwt.interface';
 
 export interface IConfig {
   port: number;
-  playground: boolean;
   url: string;
   db: MikroOrmModuleOptions;
   jwt: IJwt;

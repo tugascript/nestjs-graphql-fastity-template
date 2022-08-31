@@ -8,7 +8,6 @@ export function config(): IConfig {
 
   return {
     port: parseInt(process.env.PORT, 10),
-    playground: process.env.PLAYGROUND === 'true',
     url: process.env.URL,
     jwt: {
       access: {
