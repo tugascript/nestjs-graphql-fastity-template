@@ -114,7 +114,7 @@ export class UploaderService {
         }),
       );
     } catch (error) {
-      throw new BadRequestException(error.message);
+      console.log(error);
     }
   }
 
