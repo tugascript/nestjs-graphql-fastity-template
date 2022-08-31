@@ -253,7 +253,7 @@ $ dokku config:set app-name URL=https://your-domain.com ...
 9. On the project folder on your local computer run the following commands:
 
 ```bash
-$ git remote add dokku dokku@your-global-domain.com:app-name
+$ git remote add dokku dokku@server-public-ip-address:app-name
 $ git push dokku main:master
 ```
 
