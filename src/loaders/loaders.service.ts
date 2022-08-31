@@ -6,7 +6,7 @@ import { IBase } from '../common/interfaces/base.interface';
 import { ICreation } from '../common/interfaces/creation.interface';
 import { IPaginated } from '../common/interfaces/paginated.interface';
 import { ICountResult } from './interfaces/count-result.interface';
-import { ILoader } from './interfaces/loaders.interface';
+import { ILoader } from './interfaces/loader.interface';
 
 @Injectable()
 export class LoadersService {
