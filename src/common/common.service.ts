@@ -205,7 +205,7 @@ export class CommonService {
    *
    * Takes a query builder and returns the entities paginated
    */
-  public async queryBuilderPagination<T>(
+  public async queryBuilderPagination<T extends Object>(
     alias: string,
     cursor: keyof T,
     first: number,
