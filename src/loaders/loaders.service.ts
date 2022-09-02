@@ -6,6 +6,7 @@ import { IBase } from '../common/interfaces/base.interface';
 import { ICreation } from '../common/interfaces/creation.interface';
 import { IPaginated } from '../common/interfaces/paginated.interface';
 import { ICountResult } from './interfaces/count-result.interface';
+import { IExistenceResult } from './interfaces/existence-result.interface';
 import { ILoader } from './interfaces/loader.interface';
 
 @Injectable()
@@ -333,8 +334,8 @@ export class LoadersService {
       const pivots: P[] = result[strPivotName];
       const entities: C[] = [];
 
-      for (const pivot of pivots) {
-        entities.push(pivot[strPivotChild]);
+      for (let j = 0; j < pivots.length; j++) {
+        entities.push(pivots[j][strPivotChild]);
       }
 
       map.set(
@@ -348,5 +349,39 @@ export class LoadersService {
       map,
       this.commonService.paginate([], 0, 0, cursor, first),
     );
+  }
+
+  private async getExistence<T extends IBase>(
+    data: ILoader<T, FilterRelationDto>[],
+    parent: Type<T>,
+    fromCondition: string,
+  ): Promise<boolean[]> {
+    if (data.length === 0) return [];
+
+    const ids = LoadersService.getEntityIds(data);
+    const caseString = `
+        CASE
+          WHEN EXISTS (
+            SELECT 1
+            ${fromCondition}
+          )
+          THEN 1
+          ELSE 0
+        END AS 'existence'
+      `;
+    const raw: IExistenceResult[] = await this.em
+      .createQueryBuilder(parent, 'p')
+      .select(['p.id', caseString])
+      .where({ id: { $in: ids } })
+      .execute();
+
+    const map = new Map<number, boolean>();
+
+    for (let i = 0; i < raw.length; i++) {
+      const { id, existence } = raw[i];
+      map.set(id, existence === 1);
+    }
+
+    return LoadersService.getResults(ids, map);
   }
 }
