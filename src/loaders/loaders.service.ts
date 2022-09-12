@@ -1,3 +1,4 @@
+import { Collection } from '@mikro-orm/core';
 import { EntityManager } from '@mikro-orm/postgresql';
 import { Injectable, Type } from '@nestjs/common';
 import { CommonService } from '../common/common.service';
@@ -331,11 +332,11 @@ export class LoadersService {
 
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      const pivots: P[] = result[strPivotName];
+      const pivots: Collection<P, T> = result[strPivotName];
       const entities: C[] = [];
 
-      for (let j = 0; j < pivots.length; j++) {
-        entities.push(pivots[j][strPivotChild]);
+      for (const pivot of pivots) {
+        entities.push(pivot[strPivotChild]);
       }
 
       map.set(
