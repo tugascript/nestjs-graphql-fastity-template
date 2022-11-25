@@ -635,9 +635,7 @@ export class AuthService {
     sessionData: ISessionsData,
   ): Promise<void> {
     await this.commonService.throwInternalError(
-      this.cacheManager.set<ISessionsData>(userUuid, sessionData, {
-        ttl: this.sessionTime,
-      }),
+      this.cacheManager.set(userUuid, sessionData, this.sessionTime),
     );
   }
 }

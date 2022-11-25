@@ -205,7 +205,7 @@ export class CommonService {
    *
    * Takes a query builder and returns the entities paginated
    */
-  public async queryBuilderPagination<T extends Object>(
+  public async queryBuilderPagination<T extends Dictionary>(
     alias: string,
     cursor: keyof T,
     first: number,
@@ -262,7 +262,7 @@ export class CommonService {
    * Takes an entity repository and a FilterQuery and returns the paginated
    * entities
    */
-  public async findAndCountPagination<T>(
+  public async findAndCountPagination<T extends Dictionary>(
     cursor: keyof T,
     first: number,
     order: QueryOrderEnum,
@@ -407,7 +407,7 @@ export class CommonService {
    *
    * Validates, saves and flushes entity into the DB
    */
-  public async saveEntity<T = Dictionary>(
+  public async saveEntity<T extends Dictionary>(
     repo: EntityRepository<T>,
     entity: T,
     isNew = false,
@@ -424,7 +424,7 @@ export class CommonService {
    *
    * Removes an entity from the DB.
    */
-  public async removeEntity<T = Dictionary>(
+  public async removeEntity<T extends Dictionary>(
     repo: EntityRepository<T>,
     entity: T,
   ): Promise<void> {

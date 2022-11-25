@@ -133,9 +133,7 @@ export class UsersService {
     if (sessionData) {
       user.onlineStatus = defaultStatus;
       await this.commonService.throwInternalError(
-        this.cacheManager.set<ISessionsData>(userUuid, sessionData, {
-          ttl: this.wsAccessTime,
-        }),
+        this.cacheManager.set(userUuid, sessionData, this.wsAccessTime),
       );
       this.publishUserNotification(pubsub, user, NotificationTypeEnum.UPDATE);
     }
