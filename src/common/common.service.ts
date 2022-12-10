@@ -24,8 +24,6 @@ import { IEdge, IPaginated } from './interfaces/paginated.interface';
 
 @Injectable()
 export class CommonService {
-  //-------------------- Cursor Pagination --------------------
-
   /**
    * Encode Cursor
    *
@@ -116,7 +114,7 @@ export class CommonService {
         };
   }
 
-  //-------------------- Repository Pagination --------------------
+  //-------------------- Pagination --------------------
 
   /**
    * Paginate
@@ -160,8 +158,6 @@ export class CommonService {
     return pages;
   }
 
-  //-------------------- Notification Generation --------------------
-
   /**
    * Decode Cursor
    *
@@ -197,8 +193,6 @@ export class CommonService {
         return str;
     }
   }
-
-  //-------------------- String Formatting --------------------
 
   /**
    * Query Builder Pagination
@@ -311,6 +305,8 @@ export class CommonService {
     );
   }
 
+  //-------------------- Notification Generation --------------------
+
   /**
    * Generate Notification
    *
@@ -327,6 +323,8 @@ export class CommonService {
       type: nType,
     };
   }
+
+  //-------------------- String Formatting --------------------
 
   /**
    * Format Title
@@ -354,8 +352,6 @@ export class CommonService {
       .toLowerCase()}%`;
   }
 
-  //-------------------- Entity Validations --------------------
-
   /**
    * Generate Point Slug
    *
@@ -377,7 +373,7 @@ export class CommonService {
     });
   }
 
-  //-------------------- Entity Actions --------------------
+  //-------------------- Entity Validations --------------------
 
   /**
    * Check Existence
@@ -400,7 +396,7 @@ export class CommonService {
       throw new BadRequestException('Entity validation failed');
   }
 
-  //-------------------- Error Handling --------------------
+  //-------------------- Entity Actions --------------------
 
   /**
    * Save Entity
@@ -431,7 +427,7 @@ export class CommonService {
     await this.throwInternalError(repo.removeAndFlush(entity));
   }
 
-  //-------------------- Private Methods --------------------
+  //-------------------- Error Handling --------------------
 
   /**
    * Throw Duplicate Error
