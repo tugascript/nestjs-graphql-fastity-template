@@ -5,7 +5,7 @@ import {
   FastifyRegisterOptions,
 } from 'fastify';
 
-export interface MercuriusDriverPlugin<
+export interface MercuriusPlugin<
   Options extends FastifyPluginOptions = any,
 > {
   plugin:
@@ -15,4 +15,8 @@ export interface MercuriusDriverPlugin<
         default: FastifyPluginCallback<Options>;
       }>;
   options?: FastifyRegisterOptions<Options>;
+}
+
+export interface MercuriusPlugins {
+  plugins?: MercuriusPlugin[];
 }

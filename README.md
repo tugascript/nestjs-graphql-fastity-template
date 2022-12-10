@@ -195,14 +195,14 @@ $ yarn migrate:create
 
 ```bash
 # unit tests
-$ yarn run test  --detectOpenHandles
+$ yarn run test
 ```
 
 ### Individual test:
 
 ```bash
 # unit tests
-$ yarn run test service-name.service.spec.ts --detectOpenHandles
+$ yarn run test service-name.service.spec.ts
 ```
 
 ## Deployment

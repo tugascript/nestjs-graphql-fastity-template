@@ -9,14 +9,14 @@ import { AuthGuard } from './auth/guards/auth.guard';
 import { CommonModule } from './common/common.module';
 import { CacheConfig } from './config/cache.config';
 import { config } from './config/config';
+import { GraphQLDriver } from './config/drivers/graphql.driver';
 import { GqlConfigService } from './config/graphql.config';
 import { MikroOrmConfig } from './config/mikroorm.config';
-import { GraphQLDriver } from './config/utils/graphql.driver';
 import { validationSchema } from './config/validation';
 import { EmailModule } from './email/email.module';
+import { LoadersModule } from './loaders/loaders.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
-import { LoadersModule } from './loaders/loaders.module';
 
 @Module({
   imports: [

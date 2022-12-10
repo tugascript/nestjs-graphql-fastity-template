@@ -69,7 +69,7 @@ type Query {
   me: User!
   userByUsername(username: String!): User!
   userById(userId: Int!): User!
-  users(cursor: QueryCursor = DATE, order: QueryOrder = DESC, after: String, first: Int = 10, search: String): PaginatedUsers!
+  users(cursor: QueryCursor! = DATE, order: QueryOrder! = DESC, after: String, first: Int! = 10, search: String): PaginatedUsers!
 }
 
 enum QueryCursor {

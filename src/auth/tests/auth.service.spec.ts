@@ -440,9 +440,11 @@ describe('AuthService', () => {
               )
               .unix();
             await commonService.throwInternalError(
-              cacheManager.set<ISessionsData>(userUuid, sessionData, {
-                ttl: configService.get<number>('sessionTime'),
-              }),
+              cacheManager.set(
+                userUuid,
+                sessionData,
+                configService.get<number>('sessionTime'),
+              ),
             );
 
             return [id, sessionId];

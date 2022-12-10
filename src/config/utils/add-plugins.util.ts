@@ -1,14 +1,21 @@
-import { NestFastifyApplication } from '@nestjs/platform-fastify';
-import { MercuriusDriverPlugin } from '../interfaces/mercurius-driver-plugin.interface';
+import { FastifyInstance } from 'fastify';
+import { MercuriusPlugin } from '../interfaces/mercurius-plugin.interface';
+import { isArray, isNull, isUndefined } from './validation.util';
 
-export async function addPlugins(
-  app: NestFastifyApplication,
-  plugins?: MercuriusDriverPlugin[],
-): Promise<void> {
-  if (plugins && plugins.length > 0) {
-    for (let i = 0; i < plugins.length; i++) {
-      const plugin = plugins[i];
-      await app.register(plugin.plugin as any, plugin.options);
-    }
+export const addPlugins = async (
+  app: FastifyInstance,
+  plugins?: MercuriusPlugin[],
+): Promise<void> => {
+  if (
+    isUndefined(plugins) ||
+    isNull(plugins) ||
+    !isArray(plugins) ||
+    plugins.length === 0
+  ) {
+    return;
   }
-}
+
+  for (const plugin of plugins) {
+    await app.register(plugin.plugin, plugin.options);
+  }
+};
