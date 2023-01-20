@@ -74,7 +74,7 @@
     "@types/bcrypt": "^5.0.0",
     "@types/cache-manager": "^4.0.2",
     "@types/graphql-upload": "^8.0.12",
-    "@types/jest": "29.2.4",
+    "@types/jest": "29.2.6",
     "@types/jsonwebtoken": "^8.5.9",
     "@types/node": "^18.11.12",
     "@types/nodemailer": "^6.4.6",
