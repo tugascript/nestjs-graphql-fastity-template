@@ -4099,14 +4099,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"async-cache-dedupe@npm:^1.4.2":
-  version: 1.6.0
-  resolution: "async-cache-dedupe@npm:1.6.0"
+"async-cache-dedupe@npm:^1.8.0":
+  version: 1.8.1
+  resolution: "async-cache-dedupe@npm:1.8.1"
   dependencies:
     abstract-logging: ^2.0.1
     mnemonist: ^0.39.2
     safe-stable-stringify: ^2.3.1
-  checksum: 71a26e63382c9c07147f1e87bcb406c33f1aff577950e28b8d4d5b95eb99aa51b12e730ac04a98039092ae2abff871051f6da44e4ddab22fbcf8300a582548b6
+  checksum: 1388027e663dd4a22ef3742a447689d649ec9d222d84058e65659641be611dd72b3d9e4e918bc42b6379b2cb565042f454466ad2676fc8eb927b5cd72b58a2fb
   languageName: node
   linkType: hard
 
@@ -5966,10 +5966,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fastify-plugin@npm:^4.3.0":
-  version: 4.3.0
-  resolution: "fastify-plugin@npm:4.3.0"
-  checksum: f4831ca6de3db276f6e5c9ae172c175631be07b24b91e1de17d0cd11c1bd29fe7f671deec591a4dfd26169d3de4f9d9ca385d0e7bddccf38c6d21b5764f8b77d
+"fastify-plugin@npm:^4.5.0":
+  version: 4.5.0
+  resolution: "fastify-plugin@npm:4.5.0"
+  checksum: 3cc36a43ec72ee9974d3cd1989027e77b277b0994e4fc02ed4e6492aabd83a0be66f14fdec56e60d9a41911ea1ff1ea70c9d957a87e46bcdb8fedd859f4988fe
   languageName: node
   linkType: hard
 
@@ -8311,13 +8311,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mercurius-cache@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "mercurius-cache@npm:3.0.1"
+"mercurius-cache@npm:^4.0.0":
+  version: 4.0.0
+  resolution: "mercurius-cache@npm:4.0.0"
   dependencies:
-    async-cache-dedupe: ^1.4.2
-    fastify-plugin: ^4.3.0
-  checksum: 93120b594c20d3cefb06cae6ba08af2a3fc8ebb838169914db373640fe1adff84ab008f1c46495bb00acb03afb5c19c7f1052c155962a24efa52ee6bd4cf4960
+    async-cache-dedupe: ^1.8.0
+    fastify-plugin: ^4.5.0
+  checksum: ebf0ab034c242d12a690ef10db14e794581ff6e4d447a2dd4b364ce7a8a8ecffac57adf03e08efbec3395add98822db918efeb225e6132dd9345c58669b609fa
   languageName: node
   linkType: hard
 
@@ -8817,7 +8817,7 @@ __metadata:
     joi: ^17.7.0
     jsonwebtoken: ^9.0.0
     mercurius: ^12.0.0
-    mercurius-cache: ^3.0.1
+    mercurius-cache: ^4.0.0
     mercurius-upload: ^6.0.0
     mqemitter-redis: ^5.0.0
     nestjs-throttler-storage-redis: ^0.3.0
