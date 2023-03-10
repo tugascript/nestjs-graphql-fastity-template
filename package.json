@@ -35,7 +35,7 @@
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.2.1",
     "@nestjs/graphql": "^10.1.7",
-    "@nestjs/mercurius": "^10.1.7",
+    "@nestjs/mercurius": "^11.0.0",
     "@nestjs/platform-fastify": "^9.2.1",
     "@nestjs/throttler": "^4.0.0",
     "altair-fastify-plugin": "^5.0.9",
