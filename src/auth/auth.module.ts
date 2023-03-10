@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';

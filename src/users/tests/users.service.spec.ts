@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { faker } from '@faker-js/faker';
 import { getRepositoryToken, MikroOrmModule } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/sqlite';

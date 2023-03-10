@@ -1,6 +1,13 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { HttpException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
+import { MercuriusDriverConfig, MercuriusPlugin } from '@nestjs/mercurius';
 import AltairFastify, {
   AltairFastifyPluginOptions,
 } from 'altair-fastify-plugin';
@@ -11,14 +18,12 @@ import mqRedis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { IGqlCtx } from '../common/interfaces/gql-ctx.interface';
 import { LoadersService } from '../loaders/loaders.service';
-import { MercuriusPlugin } from './interfaces/mercurius-plugin.interface';
-import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
 
 @Injectable()
 export class GqlConfigService
-  implements GqlOptionsFactory<MercuriusExtendedDriverConfig>
+  implements GqlOptionsFactory<MercuriusDriverConfig>
 {
   private readonly testing = this.configService.get<boolean>('testing');
   private readonly redisOpt = this.configService.get<RedisOptions>('redis');
@@ -29,8 +34,28 @@ export class GqlConfigService
     private readonly loadersService: LoadersService,
   ) {}
 
-  public createGqlOptions(): MercuriusExtendedDriverConfig {
-    const plugins: MercuriusPlugin[] = [
+  public createGqlOptions(): MercuriusDriverConfig {
+    const conf: MercuriusCacheOptions = {
+      ttl: 60,
+      all: true,
+      storage: this.testing
+        ? {
+            type: 'memory',
+            options: {
+              size: 1024,
+            },
+          }
+        : {
+            type: 'redis',
+            options: {
+              client: new Redis(this.redisOpt),
+              size: 2048,
+            },
+          },
+    };
+    const plugins: MercuriusPlugin<
+      MercuriusCacheOptions | AltairFastifyPluginOptions
+    >[] = [
       {
         plugin: mercuriusCache,
         options: {

@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 export const isUndefined = (value: unknown): value is undefined => {
   return typeof value === 'undefined';
 };

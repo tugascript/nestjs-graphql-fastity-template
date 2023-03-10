@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';

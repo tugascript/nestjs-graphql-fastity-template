@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { ArgsType, Field } from '@nestjs/graphql';
 import { PaginationDto } from './pagination.dto';
 import { QueryOrderEnum } from '../enums/query-order.enum';

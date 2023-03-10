@@ -1,7 +1,13 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { MikroOrmModuleOptions } from '@mikro-orm/nestjs';
 import { ThrottlerModuleOptions } from '@nestjs/throttler';
-import { UploadOptions } from 'graphql-upload';
+import { UploadOptions } from 'graphql-upload/processRequest';
 import { RedisOptions } from 'ioredis';
 import { IBucketData } from './bucket-data.inteface';
 import { IEmailConfig } from './email-config.interface';

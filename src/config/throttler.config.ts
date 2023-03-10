@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {

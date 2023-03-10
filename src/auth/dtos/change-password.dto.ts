@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { IsString, MinLength } from 'class-validator';
 import { PasswordsDto } from './passwords.dto';
 

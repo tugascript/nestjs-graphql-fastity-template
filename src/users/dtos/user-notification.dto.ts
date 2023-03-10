@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { ArgsType, Field, Int } from '@nestjs/graphql';
 import { IsInt, IsOptional, Min } from 'class-validator';
 

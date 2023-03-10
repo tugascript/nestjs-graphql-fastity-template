@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import {
@@ -14,7 +20,6 @@ import { PubSub } from 'mercurius';
 import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { RegisterDto } from '../auth/dtos/register.dto';
 import { ISessionsData } from '../auth/interfaces/sessions-data.interface';
-import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
 import { CommonService } from '../common/common.service';
 import { SearchDto } from '../common/dtos/search.dto';
 import { LocalMessageType } from '../common/entities/gql/message.type';
@@ -23,6 +28,8 @@ import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
 import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
 import { RatioEnum } from '../common/enums/ratio.enum';
 import { IPaginated } from '../common/interfaces/paginated.interface';
+import { isNull, isUndefined } from '../config/utils/validation.util';
+import { IEmailToken } from '../jwt/interfaces/email-token.interface';
 import { UploaderService } from '../uploader/uploader.service';
 import { OnlineStatusDto } from './dtos/online-status.dto';
 import { ProfilePictureDto } from './dtos/profile-picture.dto';
@@ -206,13 +213,18 @@ export class UsersService {
    *
    * Gets user by jwt payload for auth
    */
-  public async getUserByPayload({
-    id,
-    count,
-  }: ITokenPayload): Promise<UserEntity> {
+  public async getUserByPayload(tokenData: IEmailToken): Promise<UserEntity> {
+    const { id, version } = tokenData;
     const user = await this.usersRepository.findOne({ id });
-    if (!user || user.credentials.version !== count)
+
+    if (
+      isUndefined(user) ||
+      isNull(user) ||
+      user.credentials.version !== version
+    ) {
       throw new UnauthorizedException('Token is invalid or has expired');
+    }
+
     return user;
   }
 

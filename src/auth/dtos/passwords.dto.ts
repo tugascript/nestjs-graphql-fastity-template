@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { IsString, Length, Matches, MinLength } from 'class-validator';
 import { PASSWORD_REGEX } from '../../common/constants/regex';
 

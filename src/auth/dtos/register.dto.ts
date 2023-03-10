@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { IsEmail, IsString, Length, Matches } from 'class-validator';
 import { NAME_REGEX } from '../../common/constants/regex';
 import { PasswordsDto } from './passwords.dto';

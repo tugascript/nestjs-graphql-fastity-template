@@ -1,4 +1,9 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import {
   Embedded,
   Entity,
@@ -96,16 +101,16 @@ export class UserEntity extends LocalBaseEntity implements IUser {
 
   @Property({ default: false })
   @IsBoolean()
-  public confirmed: boolean = false;
+  public confirmed = false;
 
   @Property({ default: false })
   @IsBoolean()
-  public suspended: boolean = false;
+  public suspended = false;
 
   @Field(() => Boolean, { nullable: true })
   @Property({ default: false })
   @IsBoolean()
-  public twoFactor: boolean = false;
+  public twoFactor = false;
 
   @Embedded(() => CredentialsEmbeddable)
   public credentials: CredentialsEmbeddable = new CredentialsEmbeddable();

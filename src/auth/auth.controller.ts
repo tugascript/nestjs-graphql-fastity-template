@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LocalMessageType } from '../common/entities/gql/message.type';

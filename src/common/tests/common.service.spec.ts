@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { faker } from '@faker-js/faker';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommonService } from '../common.service';

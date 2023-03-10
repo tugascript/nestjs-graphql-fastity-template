@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { ArgsType, Field } from '@nestjs/graphql';
 import { IsEnum, IsIn } from 'class-validator';
 import { OnlineStatusEnum } from '../enums/online-status.enum';

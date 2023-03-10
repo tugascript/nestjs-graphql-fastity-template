@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import {
   CacheModuleOptions,
   CacheOptionsFactory,
@@ -5,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-ioredis-yet';
-import { RedisOptions } from 'ioredis';
 
 @Injectable()
 export class CacheConfig implements CacheOptionsFactory {
@@ -19,7 +24,7 @@ export class CacheConfig implements CacheOptionsFactory {
       : {
           store: await redisStore({
             ttl,
-            ...this.configService.get<RedisOptions>('redis'),
+            ...this.configService.get('redis'),
           }),
         };
   }

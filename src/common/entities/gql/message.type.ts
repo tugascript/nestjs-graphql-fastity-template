@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Field, ID, ObjectType } from '@nestjs/graphql';
 import { v4 as uuidV4 } from 'uuid';
 

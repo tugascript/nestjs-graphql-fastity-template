@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import fastifyCookie from '@fastify/cookie';
 import fastifyCors from '@fastify/cors';
 import fastifyCsrf from '@fastify/csrf-protection';
@@ -9,7 +15,6 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
-import { UploadOptions } from 'graphql-upload';
 import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
 import { AppModule } from './app.module';
@@ -29,10 +34,7 @@ async function bootstrap() {
     secret: configService.get<string>('COOKIE_SECRET'),
   });
   app.register(fastifyCsrf as any, { cookieOpts: { signed: true } });
-  app.register(
-    mercuriusUpload as any,
-    configService.get<UploadOptions>('upload'),
-  );
+  app.register(mercuriusUpload as any, configService.get('upload'));
   app.register(fastifyStatic as any, {
     root: join(__dirname, '..', 'public'),
     decorateReply: !testing,

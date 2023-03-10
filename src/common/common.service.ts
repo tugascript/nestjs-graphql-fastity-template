@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Dictionary, FilterQuery } from '@mikro-orm/core';
 import { EntityRepository, QueryBuilder } from '@mikro-orm/postgresql';
 import {

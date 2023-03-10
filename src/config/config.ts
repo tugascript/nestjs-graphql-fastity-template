@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { LoadStrategy } from '@mikro-orm/core';
 import { IConfig } from './interfaces/config.interface';
 import { redisUrlToOptions } from './utils/redis-url-to-options.util';

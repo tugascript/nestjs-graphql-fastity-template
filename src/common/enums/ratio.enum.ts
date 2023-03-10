@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 export enum RatioEnum {
   SQUARE = 1, // 192 x 192
   MODERN = 9 / 16, // 1920 x 1080

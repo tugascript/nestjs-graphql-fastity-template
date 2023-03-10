@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { registerEnumType } from '@nestjs/graphql';
 import { IUser } from '../../users/interfaces/user.interface';
 

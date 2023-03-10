@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { RedisOptions } from 'ioredis';
 
 export const redisUrlToOptions = (url: string): RedisOptions => {

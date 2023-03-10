@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { ArgsType, Field, Int } from '@nestjs/graphql';
 import { IsEnum, IsInt, Max, Min } from 'class-validator';
 import { QueryOrderEnum } from '../enums/query-order.enum';

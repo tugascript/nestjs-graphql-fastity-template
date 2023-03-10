@@ -1,23 +1,40 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import {
   BadRequestException,
   CACHE_MANAGER,
   Inject,
   Injectable,
+  Logger,
+  LoggerService,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
+import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
 import { FastifyReply, FastifyRequest } from 'fastify';
-import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
+import { v4 as uuidV4 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { LocalMessageType } from '../common/entities/gql/message.type';
 import { IJwt, ISingleJwt } from '../config/interfaces/jwt.interface';
 import { IWsCtx } from '../config/interfaces/ws-ctx.interface';
+import { isNull, isUndefined } from '../config/utils/validation.util';
 import { EmailService } from '../email/email.service';
+import { TokenTypeEnum } from '../jwt/enums/token-type.enum';
+import { IAccessToken } from '../jwt/interfaces/access-token.interface';
+import { IEmailToken } from '../jwt/interfaces/email-token.interface';
+import { IRefreshToken } from '../jwt/interfaces/refresh-token.interface';
+import { JwtService } from '../jwt/jwt.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { OnlineStatusEnum } from '../users/enums/online-status.enum';
+import { ICredentials } from '../users/interfaces/credentials.interface';
+import { IUser } from '../users/interfaces/user.interface';
 import { UsersService } from '../users/users.service';
 import { ChangeEmailDto } from './dtos/change-email.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
@@ -27,67 +44,52 @@ import { LoginDto } from './dtos/login.dto';
 import { RegisterDto } from './dtos/register.dto';
 import { ResetEmailDto } from './dtos/reset-email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
-import { generateToken, verifyToken } from './helpers/async-jwt';
-import {
-  IAccessPayload,
-  IAccessPayloadResponse,
-} from './interfaces/access-payload.interface';
+import { generateToken } from './helpers/async-jwt';
+import { IAccessPayload } from './interfaces/access-payload.interface';
 import { IAuthResult } from './interfaces/auth-result.interface';
 import { ISessionsData } from './interfaces/sessions-data.interface';
-import {
-  ITokenPayload,
-  ITokenPayloadResponse,
-} from './interfaces/token-payload.interface';
+import { ITokenPayload } from './interfaces/token-payload.interface';
 
 @Injectable()
 export class AuthService {
-  private readonly cookieName =
-    this.configService.get<string>('REFRESH_COOKIE');
-  private readonly url = this.configService.get<string>('url');
-  private readonly authNamespace = this.configService.get<string>('AUTH_UUID');
-  private readonly wsNamespace = this.configService.get<string>('WS_UUID');
-  private readonly testing = this.configService.get<boolean>('testing');
-  private readonly refreshTime =
-    this.configService.get<number>('jwt.refresh.time');
-  private readonly accessTime =
-    this.configService.get<number>('jwt.access.time');
-  private readonly sessionTime = this.configService.get<number>('sessionTime');
+  private readonly loggerService: LoggerService;
+  private readonly cookieName: string;
+  private readonly testing: boolean;
+  private readonly refreshTime: number;
+  private readonly accessTime: number;
+  private readonly sessionTime: number;
 
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly emailService: EmailService,
     private readonly commonService: CommonService,
+    private readonly jwtService: JwtService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) {}
+  ) {
+    this.loggerService = new Logger(AuthService.name);
+    this.cookieName = this.configService.get<string>('REFRESH_COOKIE');
+    this.testing = this.configService.get<boolean>('testing');
+    this.refreshTime = this.configService.get<number>('jwt.refresh.time');
+    this.accessTime = this.configService.get<number>('jwt.access.time');
+    this.sessionTime = this.configService.get<number>('jwt.session.time');
+  }
 
   //____________________ STATIC ____________________
 
   /**
-   * Generate Access Code
-   *
-   * Generates a 6 char long number string for two-factor auth
+   * Generates a random 6 char long string for two-factor auth
    */
   private static generateAccessCode(): string {
-    const nums = '0123456789';
-
-    let code = '';
-    while (code.length < 6) {
-      const i = Math.floor(Math.random() * nums.length);
-      code += nums[i];
-    }
-
-    return code;
+    return randomBytes(3).toString('hex').toUpperCase();
   }
 
   //____________________ MUTATIONS ____________________
 
   /**
-   * Register User
-   *
-   * Takes the register input, creates a new user in the db
-   * and asynchronously sends a confirmation email
+   * Takes the register input, creates a new user in the db and asynchronously
+   * sends a confirmation email
    */
   public async registerUser(input: RegisterDto): Promise<LocalMessageType> {
     const user = await this.usersService.createUser(input);
@@ -96,18 +98,16 @@ export class AuthService {
   }
 
   /**
-   * Confirm Email
-   *
    * Takes a confirmation token, confirms and updates the user
    */
   public async confirmEmail(
     res: FastifyReply,
     { confirmationToken }: ConfirmEmailDto,
   ): Promise<IAuthResult> {
-    const payload = (await this.verifyAuthToken(
+    const payload = await this.jwtService.verifyToken<IEmailToken>(
       confirmationToken,
-      'confirmation',
-    )) as ITokenPayloadResponse;
+      TokenTypeEnum.CONFIRMATION,
+    );
     const user = await this.usersService.getUserByPayload(payload);
 
     if (user.confirmed)
@@ -124,86 +124,46 @@ export class AuthService {
   }
 
   /**
-   * Login User
-   *
-   * Takes the login input, if two-factor auth is true: it caches a new access code and
-   * asynchronously sends it by email. If false, it sends an auth type
+   * Takes the login input, if two-factor auth is true: it caches a new access
+   * code and asynchronously sends it by email. If false, it sends an auth type
    */
   public async loginUser(
     res: FastifyReply,
-    { email, password }: LoginDto,
+    dto: LoginDto,
   ): Promise<IAuthResult | LocalMessageType> {
-    email = email.toLowerCase();
+    const password = dto.password;
+    const email = dto.email.toLowerCase();
     const user = await this.usersService.getUserForAuth(email);
-    const currentPassword = user.password;
-    const { lastPassword, updatedAt } = user.credentials;
-    const now = dayjs();
-    const time = dayjs.unix(updatedAt);
-    const months = now.diff(time, 'month');
 
-    if (!(await compare(password, currentPassword))) {
-      // To check for passwords changes, based on facebook auth
-      if (lastPassword.length > 0 && !(await compare(password, lastPassword))) {
-        let message = 'You changed your password ';
-
-        if (months > 0) {
-          message += months + ' months ago.';
-        } else {
-          const days = now.diff(time, 'day');
-
-          if (days > 0) {
-            message += days + ' days ago.';
-          } else {
-            const hours = now.diff(time, 'hour');
-
-            if (hours > 0) {
-              message += hours + ' hours ago.';
-            } else {
-              message += 'recently.';
-            }
-          }
-        }
-
-        throw new UnauthorizedException(message);
-      }
-
-      throw new UnauthorizedException('Invalid credentials');
+    if (!(await compare(password, user.password))) {
+      await this.checkLastPassword(user.credentials, password);
     }
-
     if (!user.confirmed) {
       this.sendConfirmationEmail(user);
       throw new UnauthorizedException(
         'Please confirm your account. A new email has been sent',
       );
     }
-
     if (user.twoFactor) {
       const code = AuthService.generateAccessCode();
-
       await this.commonService.throwInternalError(
         this.cacheManager.set(
-          uuidV5(email, this.authNamespace),
+          `two_factor:${email}`,
           await hash(code, 5),
+          this.accessTime * 1000,
         ),
       );
-
       this.emailService.sendAccessCode(user, code);
-
       return new LocalMessageType('Login confirmation code sent');
     }
 
     const [accessToken, refreshToken] = await this.generateAuthTokens(user);
     this.saveRefreshCookie(res, refreshToken);
-
     user.lastLogin = new Date();
     await this.usersService.saveUserToDb(user);
 
     return {
       accessToken,
-      message:
-        months >= 6
-          ? new LocalMessageType('Please confirm your credentials')
-          : undefined,
     };
   }
 
@@ -229,11 +189,12 @@ export class AuthService {
    */
   public async confirmLogin(
     res: FastifyReply,
-    { email, accessCode }: ConfirmLoginDto,
+    dto: ConfirmLoginDto,
   ): Promise<IAuthResult> {
-    email = email.toLowerCase();
+    const accessCode = dto.accessCode;
+    const email = dto.email.toLowerCase();
     const hashedCode = await this.commonService.throwInternalError(
-      this.cacheManager.get<string>(uuidV5(email, this.authNamespace)),
+      this.cacheManager.get<string>(`two_factor:${email}`),
     );
 
     if (!hashedCode || !(await compare(accessCode, hashedCode)))
@@ -255,7 +216,16 @@ export class AuthService {
    *
    * Removes the refresh token from the cookies
    */
-  public logoutUser(res: FastifyReply): LocalMessageType {
+  public async logoutUser(
+    req: FastifyRequest,
+    res: FastifyReply,
+  ): Promise<LocalMessageType> {
+    const token = this.getRefreshToken(req, res);
+    const payload = await this.jwtService.verifyToken<IRefreshToken>(
+      token,
+      TokenTypeEnum.REFRESH,
+    );
+    await this.blacklistToken(payload.id, payload.tokenId, payload.exp);
     res.clearCookie(this.cookieName, { path: '/api/auth/refresh-access' });
     return new LocalMessageType('Logout Successfully');
   }
@@ -272,22 +242,15 @@ export class AuthService {
     req: FastifyRequest,
     res: FastifyReply,
   ): Promise<IAuthResult> {
-    const token = req.cookies[this.cookieName];
+    const token = this.getRefreshToken(req, res);
+    const { id, version } = await this.jwtService.verifyToken<IRefreshToken>(
+      token,
+      TokenTypeEnum.REFRESH,
+    );
+    const user = await this.usersService.getUncheckUserById(id);
 
-    if (!token) throw new UnauthorizedException('Invalid refresh token');
-
-    const { valid, value } = res.unsignCookie(token);
-
-    if (!valid) throw new UnauthorizedException('Invalid refresh token');
-
-    const payload = (await this.verifyAuthToken(
-      value,
-      'refresh',
-    )) as ITokenPayloadResponse;
-    const user = await this.usersService.getUncheckUserById(payload.id);
-
-    if (user.credentials.version !== payload.count) {
-      this.logoutUser(res);
+    if (user.credentials.version !== version) {
+      res.clearCookie(this.cookieName, { path: '/api/auth' });
       throw new UnauthorizedException('Token is invalid or expired');
     }
 
@@ -313,8 +276,7 @@ export class AuthService {
         { id: user.id, count: user.credentials.version },
         'resetPassword',
       );
-      const url = `${this.url}/reset-password/${resetToken}/`;
-      this.emailService.sendPasswordResetEmail(user, url);
+      this.emailService.sendResetPasswordEmail(user, resetToken);
     }
 
     return new LocalMessageType('Password reset email sent');
@@ -325,18 +287,16 @@ export class AuthService {
    *
    * Resets password given a reset password jwt token
    */
-  public async resetPassword({
-    resetToken,
-    password1,
-    password2,
-  }: ResetPasswordDto): Promise<LocalMessageType> {
-    const payload = (await this.verifyAuthToken(
+  public async resetPassword(dto: ResetPasswordDto): Promise<LocalMessageType> {
+    const { password1, password2, resetToken } = dto;
+    const payload = await this.jwtService.verifyToken<IEmailToken>(
       resetToken,
-      'resetPassword',
-    )) as ITokenPayloadResponse;
+      TokenTypeEnum.RESET_PASSWORD,
+    );
 
-    if (password1 !== password2)
+    if (password1 !== password2) {
       throw new BadRequestException('Passwords do not match');
+    }
 
     const user = await this.usersService.getUserByPayload(payload);
     user.credentials.updatePassword(user.password);
@@ -393,11 +353,7 @@ export class AuthService {
     return { accessToken };
   }
 
-  //____________________ WebSocket Auth ____________________
-
   /**
-   * Update Password
-   *
    * Change current user password
    */
   public async updatePassword(
@@ -429,24 +385,28 @@ export class AuthService {
   }
 
   /**
-   * Generate Websocket Session
-   *
-   * Generates a session for a given user, saves it to the
-   * sessions redis cache and returns the current user and
-   * session id
+   * Generates a session for a given user, saves it to the sessions redis cache
+   * and returns the current user with the session id
    */
   public async generateWsSession(
     accessToken: string,
   ): Promise<[number, string]> {
-    const { id } = await this.verifyAuthToken(accessToken, 'access');
+    const { id } = await this.jwtService.verifyToken<IAccessToken>(
+      accessToken,
+      TokenTypeEnum.ACCESS,
+    );
     const user = await this.usersService.userById(id);
-    const userUuid = uuidV5(user.id.toString(), this.wsNamespace);
+    const sessionKey = `session:${id}`;
     const count = user.credentials.version;
     let sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
+      this.cacheManager.get<ISessionsData>(sessionKey),
     );
 
-    if (!sessionData || sessionData.count != count) {
+    if (
+      isUndefined(sessionData) ||
+      isNull(sessionData) ||
+      sessionData.count !== count
+    ) {
       sessionData = {
         sessions: {},
         count,
@@ -456,23 +416,19 @@ export class AuthService {
 
     const sessionId = uuidV4();
     sessionData.sessions[sessionId] = dayjs().unix();
-    await this.saveSessionData(userUuid, sessionData);
+    await this.saveSessionData(sessionKey, sessionData);
 
     return [id, sessionId];
   }
 
   /**
-   * Refresh User Session
-   *
    * Checks if user session is valid for websocket auth
    */
-  public async refreshUserSession({
-    userId,
-    sessionId,
-  }: IWsCtx): Promise<boolean> {
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
+  public async refreshUserSession(wsCtx: IWsCtx): Promise<boolean> {
+    const { userId, sessionId } = wsCtx;
+    const sessionKey = `session:${userId}`;
     const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
+      this.cacheManager.get<ISessionsData>(sessionKey),
     );
 
     if (!sessionData) return false;
@@ -485,44 +441,44 @@ export class AuthService {
 
     if (now - session > this.accessTime) {
       const user = await this.usersService.getUncheckUserById(userId);
-      if (!user) return false;
 
+      if (!user) return false;
       if (user.credentials.version !== sessionData.count) {
         await this.commonService.throwInternalError(
-          this.cacheManager.del(userUuid),
+          this.cacheManager.del(sessionKey),
         );
         return false;
       }
 
       sessionData.sessions[sessionId] = now;
-      await this.saveSessionData(userUuid, sessionData);
+      await this.saveSessionData(sessionKey, sessionData);
     }
 
     return true;
   }
 
-  //____________________ OTHER METHODS ____________________
+  //____________________ WebSocket Auth ____________________
 
   /**
-   * Close User Session
-   *
-   * Removes websocket session from cache, if it's the only
-   * one, makes the user online status offline
+   * Removes websocket session from cache, if it's the only one, makes the user
+   * online status offline
    */
-  public async closeUserSession({ userId, sessionId }: IWsCtx): Promise<void> {
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
+  public async closeUserSession(wsCtx: IWsCtx): Promise<void> {
+    const { userId, sessionId } = wsCtx;
+    const sessionKey = `session:${userId}`;
     const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
+      this.cacheManager.get<ISessionsData>(sessionKey),
     );
 
-    if (!sessionData.sessions[sessionId])
+    if (!sessionData.sessions[sessionId]) {
       throw new UnauthorizedException('Invalid session');
+    }
 
     delete sessionData.sessions[sessionId];
 
     if (Object.keys(sessionData.sessions).length === 0) {
       await this.commonService.throwInternalError(
-        this.cacheManager.del(userUuid),
+        this.cacheManager.del(sessionKey),
       );
       const user = await this.usersService.userById(userId);
       user.lastOnline = new Date();
@@ -531,72 +487,125 @@ export class AuthService {
       return;
     }
 
-    await this.saveSessionData(userUuid, sessionData);
+    await this.saveSessionData(sessionKey, sessionData);
   }
 
-  //____________________ PRIVATE METHODS ____________________
+  private async checkLastPassword(
+    credentials: ICredentials,
+    password: string,
+  ): Promise<void> {
+    const { lastPassword, passwordUpdatedAt } = credentials;
 
-  /**
-   * Verify Auth Token
-   *
-   * A generic jwt verifier that verifies all token needed for auth
-   */
-  public async verifyAuthToken(
-    token: string,
-    type: keyof IJwt,
-  ): Promise<ITokenPayloadResponse | IAccessPayloadResponse> {
-    const secret = this.configService.get<string>(`jwt.${type}.secret`);
+    if (lastPassword.length === 0 || !(await compare(password, lastPassword))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-    try {
-      return await verifyToken(token, secret);
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Token has expired');
-      } else {
-        throw new UnauthorizedException(error.message);
-      }
+    const now = dayjs();
+    const time = dayjs.unix(passwordUpdatedAt);
+    const months = now.diff(time, 'month');
+    const message = 'You changed your password ';
+
+    if (months > 0) {
+      throw new UnauthorizedException(
+        message + months + (months > 1 ? ' months ago' : ' month ago'),
+      );
+    }
+
+    const days = now.diff(time, 'day');
+
+    if (days > 0) {
+      throw new UnauthorizedException(
+        message + days + (days > 1 ? ' days ago' : ' day ago'),
+      );
+    }
+
+    const hours = now.diff(time, 'hour');
+
+    if (hours > 0) {
+      throw new UnauthorizedException(
+        message + hours + (hours > 1 ? ' hours ago' : ' hour ago'),
+      );
+    }
+
+    throw new UnauthorizedException(message + 'recently');
+  }
+
+  private async blacklistToken(
+    userId: number,
+    tokenId: string,
+    exp: number,
+  ): Promise<void> {
+    const now = dayjs().unix();
+    const ttl = (exp - now) * 1000;
+
+    if (ttl > 0) {
+      await this.commonService.throwInternalError(
+        this.cacheManager.set(`blacklist:${userId}:${tokenId}`, now, ttl),
+      );
     }
   }
 
+  private getRefreshToken(req: FastifyRequest, res: FastifyReply): string {
+    const token = req.cookies[this.cookieName];
+
+    if (isUndefined(token) || isNull(token)) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const { valid, value } = res.unsignCookie(token);
+
+    if (!valid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    return value;
+  }
+
   /**
-   * Send Confirmation Email
-   *
-   * Sends an email for the user to confirm
-   * his account after registration
+   * Sends an email for the user to confirm his account after registration
    */
-  private async sendConfirmationEmail(user: UserEntity): Promise<string> {
-    const emailToken = await this.generateAuthToken(
+  private sendConfirmationEmail(user: UserEntity) {
+    this.generateAuthToken(
       { id: user.id, count: user.credentials.version },
       'confirmation',
-    );
-    const url = `${this.url}/confirm-email/${emailToken}/`;
-    await this.emailService.sendConfirmationEmail(user, url);
-    return emailToken;
+    )
+      .then((token) => {
+        this.emailService.sendConfirmationEmail(user, token);
+      })
+      .catch(() => {
+        this.loggerService.error('Error sending confirmation email');
+      });
   }
 
   /**
-   * Generate Auth Tokens
-   *
-   * Generates an array with both the access and
-   * refresh token.
-   *
-   * This function takes advantage of Promise.all.
+   * This function takes advantage of Promise.all
    */
-  private async generateAuthTokens({
-    id,
-    credentials,
-  }: UserEntity): Promise<[string, string]> {
-    return Promise.all([
-      this.generateAuthToken({ id }, 'access'),
-      this.generateAuthToken({ id, count: credentials.version }, 'refresh'),
-    ]);
+  private async generateAuthTokens(
+    user: IUser,
+    domain?: string,
+    tokenId?: string,
+  ): Promise<[string, string]> {
+    return this.commonService.throwInternalError(
+      Promise.all([
+        this.jwtService.generateToken(
+          user,
+          TokenTypeEnum.ACCESS,
+          domain,
+          tokenId,
+        ),
+        this.jwtService.generateToken(
+          user,
+          TokenTypeEnum.REFRESH,
+          domain,
+          tokenId,
+        ),
+      ]),
+    );
   }
 
   /**
-   * Generate Jwt Token
-   *
-   * A generic jwt generator that generates all tokens needed
-   * for auth (access, refresh, confirmation & resetPassword)
+   * A generic jwt generator that generates all tokens needed for auth (access,
+   * refresh, confirmation & resetPassword)
    */
   private async generateAuthToken(
     payload: ITokenPayload | IAccessPayload,
@@ -610,24 +619,20 @@ export class AuthService {
   }
 
   /**
-   * Save Refresh Cookie
-   *
-   * Saves the refresh token as a http only cookie to
-   * be used for refreshing the access token
+   * Saves the refresh token as a http only cookie to be used for refreshing
+   * the access token
    */
   private saveRefreshCookie(res: FastifyReply, token: string): void {
     res.cookie(this.cookieName, token, {
       secure: !this.testing,
       httpOnly: true,
       signed: true,
-      path: '/api/auth/refresh-access',
+      path: '/api/auth',
       expires: new Date(Date.now() + this.refreshTime * 1000),
     });
   }
 
   /**
-   * Save Session Data
-   *
    * Saves session data in cache
    */
   private async saveSessionData(
@@ -635,7 +640,7 @@ export class AuthService {
     sessionData: ISessionsData,
   ): Promise<void> {
     await this.commonService.throwInternalError(
-      this.cacheManager.set(userUuid, sessionData, this.sessionTime),
+      this.cacheManager.set(userUuid, sessionData, this.sessionTime * 1000),
     );
   }
 }

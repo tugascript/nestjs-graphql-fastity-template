@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Entity, PrimaryKey, Property } from '@mikro-orm/core';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IBase } from '../interfaces/base.interface';

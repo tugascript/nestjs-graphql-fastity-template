@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { QueryCursorEnum } from './query-cursor.enum';
 
 export enum CursorTypeEnum {

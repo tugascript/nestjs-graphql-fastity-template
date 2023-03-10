@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { faker } from '@faker-js/faker';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { CACHE_MANAGER, CacheModule } from '@nestjs/common';

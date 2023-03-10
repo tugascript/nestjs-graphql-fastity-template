@@ -1,15 +1,21 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { CacheModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
+import { MercuriusDriver } from '@nestjs/mercurius';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { CommonModule } from './common/common.module';
 import { CacheConfig } from './config/cache.config';
 import { config } from './config/config';
-import { GraphQLDriver } from './config/drivers/graphql.driver';
 import { GqlConfigService } from './config/graphql.config';
 import { MikroOrmConfig } from './config/mikroorm.config';
 import { validationSchema } from './config/validation';
@@ -17,6 +23,7 @@ import { EmailModule } from './email/email.module';
 import { LoadersModule } from './loaders/loaders.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
+import { JwtModule } from './jwt/jwt.module';
 
 @Module({
   imports: [
@@ -35,7 +42,7 @@ import { UsersModule } from './users/users.module';
     }),
     GraphQLModule.forRootAsync({
       imports: [ConfigModule, AuthModule, LoadersModule],
-      driver: GraphQLDriver,
+      driver: MercuriusDriver,
       useClass: GqlConfigService,
     }),
     UsersModule,
@@ -44,6 +51,7 @@ import { UsersModule } from './users/users.module';
     EmailModule,
     UploaderModule,
     LoadersModule,
+    JwtModule,
   ],
   providers: [
     {

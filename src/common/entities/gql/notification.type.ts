@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Type } from '@nestjs/common';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { NotificationTypeEnum } from '../../enums/notification-type.enum';

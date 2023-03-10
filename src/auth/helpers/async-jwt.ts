@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import * as jwt from 'jsonwebtoken';
 
 export const generateToken = async (

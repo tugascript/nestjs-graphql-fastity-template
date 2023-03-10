@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { ArgsType, Field } from '@nestjs/graphql';
 import { IsString, Matches } from 'class-validator';
 import { SLUG_REGEX } from '../../common/constants/regex';

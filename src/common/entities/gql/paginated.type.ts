@@ -1,3 +1,9 @@
+/*
+  Free and Open Source - MIT
+  Copyright © 2023
+  Afonso Barracha
+*/
+
 import { Type } from '@nestjs/common';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
 import { IPageInfo, IPaginated } from '../../interfaces/paginated.interface';
