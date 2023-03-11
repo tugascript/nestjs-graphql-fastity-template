@@ -37,6 +37,7 @@
     "@nestjs/graphql": "^11.0.0",
     "@nestjs/mercurius": "^11.0.3",
     "@nestjs/platform-fastify": "^9.3.9",
+    "@nestjs/swagger": "^6.2.1",
     "@nestjs/throttler": "^4.0.0",
     "altair-fastify-plugin": "^5.0.17",
     "bcrypt": "^5.1.0",

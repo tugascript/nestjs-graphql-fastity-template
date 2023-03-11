@@ -26,5 +26,6 @@ export interface IConfig {
   upload: UploadOptions;
   testing: boolean;
   sessionTime: number;
+  twoFactorTime: number;
   throttler: ThrottlerModuleOptions;
 }

@@ -4,9 +4,10 @@
   Afonso Barracha
 */
 
-import { LocalMessageType } from '../../common/entities/gql/message.type';
+import { IUser } from '../../users/interfaces/user.interface';
 
 export interface IAuthResult {
+  user: IUser;
   accessToken: string;
-  message?: LocalMessageType;
+  refreshToken: string;
 }

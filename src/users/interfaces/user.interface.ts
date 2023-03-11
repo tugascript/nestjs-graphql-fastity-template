@@ -4,16 +4,23 @@
   Afonso Barracha
 */
 
-import { IBase } from '../../common/interfaces/base.interface';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
 import { ICredentials } from './credentials.interface';
 
-export interface IUser extends IBase {
+export interface IUser {
+  id: number;
   name: string;
   username: string;
   email: string;
   picture?: string;
-  onlineStatus: OnlineStatusEnum;
-  lastOnline: Date;
+  password: string;
+  confirmed: boolean;
+  twoFactor: boolean;
   credentials: ICredentials;
+  onlineStatus: OnlineStatusEnum;
+  defaultStatus: OnlineStatusEnum;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin: Date;
+  lastOnline: Date;
 }

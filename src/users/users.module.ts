@@ -6,14 +6,14 @@
 
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Module } from '@nestjs/common';
-import { UploaderModule } from '../uploader/uploader.module';
 import { UserEntity } from './entities/user.entity';
-import { UsersResolver } from './users.resolver';
 import { UsersService } from './users.service';
+import { UsersController } from './users.controller';
 
 @Module({
-  imports: [MikroOrmModule.forFeature([UserEntity]), UploaderModule],
-  providers: [UsersService, UsersResolver],
+  imports: [MikroOrmModule.forFeature([UserEntity])],
+  providers: [UsersService],
   exports: [UsersService],
+  controllers: [UsersController],
 })
 export class UsersModule {}

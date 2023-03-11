@@ -1,5 +1,5 @@
 /*
-  Free and Open Source - GNU LGPLv3
+  Free and Open Source - MIT
   Copyright © 2023
   Afonso Barracha
 */

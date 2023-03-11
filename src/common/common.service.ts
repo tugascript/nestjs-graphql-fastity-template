@@ -16,6 +16,7 @@ import {
 import { validate } from 'class-validator';
 import slugify from 'slugify';
 import { v4 as uuidV4 } from 'uuid';
+import { isNull, isUndefined } from '../config/utils/validation.util';
 import { CursorTypeEnum } from './enums/cursor-type.enum';
 import { NotificationTypeEnum } from './enums/notification-type.enum';
 import {
@@ -381,13 +382,13 @@ export class CommonService {
 
   //-------------------- Entity Validations --------------------
 
-  /**
-   * Check Existence
-   *
-   * Checks if a findOne query didn't return null or undefined
-   */
-  public checkExistence<T>(name: string, entity?: T | null): void {
-    if (!entity) throw new NotFoundException(`${name} not found`);
+  public checkEntityExistence<T extends Dictionary>(
+    entity: T | null | undefined,
+    name: string,
+  ): void {
+    if (isNull(entity) || isUndefined(entity)) {
+      throw new NotFoundException(`${name} not found`);
+    }
   }
 
   /**

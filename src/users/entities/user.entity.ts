@@ -4,13 +4,7 @@
   Afonso Barracha
 */
 
-import {
-  Embedded,
-  Entity,
-  Enum,
-  OptionalProps,
-  Property,
-} from '@mikro-orm/core';
+import { Embedded, Entity, Enum, Property } from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
 import {
   IsBoolean,
@@ -36,50 +30,36 @@ import { IUser } from '../interfaces/user.interface';
 @ObjectType('User')
 @Entity({ tableName: 'users' })
 export class UserEntity extends LocalBaseEntity implements IUser {
-  [OptionalProps]?:
-    | 'id'
-    | 'createdAt'
-    | 'updatedAt'
-    | 'picture'
-    | 'onlineStatus'
-    | 'defaultStatus'
-    | 'confirmed'
-    | 'suspended'
-    | 'twoFactor'
-    | 'credentials'
-    | 'lastLogin'
-    | 'lastOnline';
-
   @Field(() => String)
-  @Property({ columnType: 'varchar(100)' })
+  @Property({ columnType: 'varchar', length: 100 })
   @IsString()
   @Length(3, 100)
-  @Matches(NAME_REGEX)
-  public name!: string;
+  @Matches(NAME_REGEX, {
+    message: 'Name must not have special characters',
+  })
+  public name: string;
 
   @Field(() => String)
-  @Property({ columnType: 'varchar(110)', unique: true })
+  @Property({ columnType: 'varchar', length: 106 })
   @IsString()
-  @Length(3, 110)
-  @Matches(SLUG_REGEX)
-  public username!: string;
+  @Length(3, 106)
+  @Matches(SLUG_REGEX, {
+    message: 'Username must be a valid slugs',
+  })
+  public username: string;
 
   @Field(() => String, { nullable: true })
-  @Property({ columnType: 'varchar(255)', unique: true })
+  @Property({ columnType: 'varchar', length: 255 })
+  @IsString()
   @IsEmail()
-  public email!: string;
+  @Length(5, 255)
+  public email: string;
 
   @Field(() => String, { nullable: true })
   @Property({ columnType: 'varchar(255)', nullable: true })
   @IsOptional()
   @IsUrl()
   public picture?: string;
-
-  @Property({ columnType: 'varchar(60)' })
-  @IsString()
-  @Length(59, 60)
-  @Matches(BCRYPT_HASH)
-  public password!: string;
 
   @Field(() => OnlineStatusEnum)
   @Enum({
@@ -99,18 +79,19 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @IsEnum(OnlineStatusEnum)
   public defaultStatus: OnlineStatusEnum = OnlineStatusEnum.ONLINE;
 
-  @Property({ default: false })
-  @IsBoolean()
-  public confirmed = false;
+  @Property({ columnType: 'varchar', length: 60 })
+  @IsString()
+  @Length(59, 60)
+  @Matches(BCRYPT_HASH)
+  public password: string;
 
-  @Property({ default: false })
+  @Property({ columnType: 'boolean', default: false })
   @IsBoolean()
-  public suspended = false;
+  public confirmed: true | false = false;
 
-  @Field(() => Boolean, { nullable: true })
-  @Property({ default: false })
+  @Property({ columnType: 'boolean', default: false })
   @IsBoolean()
-  public twoFactor = false;
+  public twoFactor: true | false = false;
 
   @Embedded(() => CredentialsEmbeddable)
   public credentials: CredentialsEmbeddable = new CredentialsEmbeddable();

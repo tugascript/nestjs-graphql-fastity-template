@@ -4,21 +4,24 @@
   Afonso Barracha
 */
 
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { GqlExecutionContext } from '@nestjs/graphql';
-import { IGqlCtx } from '../../common/interfaces/gql-ctx.interface';
+import { isJWT } from 'class-validator';
+import { FastifyRequest } from 'fastify';
+import { isNull, isUndefined } from '../../common/utils/validation.util';
 import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
 import { JwtService } from '../../jwt/jwt.service';
-import { AuthService } from '../auth.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { IExtendedRequest } from '../interfaces/extended-request.interface';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
-    private readonly authService: AuthService,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -27,38 +30,47 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
+    const activate = await this.setHttpHeader(
+      context.switchToHttp().getRequest<FastifyRequest>(),
+      isPublic,
+    );
 
-    if (context.getType() === 'http') {
-      return await this.setHttpHeader(
-        context.switchToHttp().getRequest(),
-        isPublic,
-      );
+    if (!activate) {
+      throw new UnauthorizedException();
     }
 
-    const gqlCtx: IGqlCtx = GqlExecutionContext.create(context).getContext();
-
-    if (gqlCtx.ws) {
-      return await this.authService.refreshUserSession(gqlCtx.ws);
-    }
-
-    return await this.setHttpHeader(gqlCtx.reply.request, isPublic);
+    return activate;
   }
 
+  /**
+   * Sets HTTP Header
+   *
+   * Checks if the header has a valid Bearer token, validates it and sets the User ID as the user.
+   */
   private async setHttpHeader(
-    req: IExtendedRequest,
+    req: FastifyRequest,
     isPublic: boolean,
   ): Promise<boolean> {
     const auth = req.headers?.authorization;
 
-    if (!auth) return isPublic;
+    if (isUndefined(auth) || isNull(auth) || auth.length === 0) {
+      return isPublic;
+    }
 
-    const arr = auth.split(' ');
+    const authArr = auth.split(' ');
+    const bearer = authArr[0];
+    const token = authArr[1];
 
-    if (arr[0] !== 'Bearer') return isPublic;
+    if (isUndefined(bearer) || isNull(bearer) || bearer !== 'Bearer') {
+      return isPublic;
+    }
+    if (isUndefined(token) || isNull(token) || !isJWT(token)) {
+      return isPublic;
+    }
 
     try {
       const { id } = await this.jwtService.verifyToken(
-        arr[1],
+        token,
         TokenTypeEnum.ACCESS,
       );
       req.user = id;

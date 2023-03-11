@@ -5,12 +5,20 @@
 */
 
 import { LoadStrategy } from '@mikro-orm/core';
+import { defineConfig as definePGConfig } from '@mikro-orm/postgresql';
+import { defineConfig as defineSqliteConfig } from '@mikro-orm/sqlite';
 import { IConfig } from './interfaces/config.interface';
 import { redisUrlToOptions } from './utils/redis-url-to-options.util';
 
 export function config(): IConfig {
   const testing = process.env.NODE_ENV !== 'production';
   const bucketBase = `${process.env.BUCKET_REGION}.${process.env.BUCKET_HOST}.com`;
+  const baseORMOptions = {
+    entities: ['dist/**/*.entity.js', 'dist/**/*.embeddable.js'],
+    entitiesTs: ['src/**/*.entity.ts', 'src/**/*.embeddable.ts'],
+    loadStrategy: LoadStrategy.JOINED,
+    allowGlobalContext: true,
+  };
 
   return {
     port: parseInt(process.env.PORT, 10),
@@ -56,22 +64,14 @@ export function config(): IConfig {
       url: `https://${process.env.BUCKET_NAME}.${bucketBase}/`,
     },
     db: testing
-      ? {
-          type: 'sqlite',
-          dbName: 'test.db',
-          entities: ['dist/**/*.entity.js', 'dist/**/*.embeddable.js'],
-          entitiesTs: ['src/**/*.entity.ts', 'src/**/*.embeddable.ts'],
-          loadStrategy: LoadStrategy.JOINED,
-          allowGlobalContext: true,
-        }
-      : {
-          type: 'postgresql',
+      ? defineSqliteConfig({
+          ...baseORMOptions,
+          dbName: ':memory:',
+        })
+      : definePGConfig({
+          ...baseORMOptions,
           clientUrl: process.env.DATABASE_URL,
-          entities: ['dist/**/*.entity.js', 'dist/**/*.embeddable.js'],
-          entitiesTs: ['src/**/*.entity.ts', 'src/**/*.embeddable.ts'],
-          loadStrategy: LoadStrategy.JOINED,
-          allowGlobalContext: true,
-        },
+        }),
     redis: testing ? undefined : redisUrlToOptions(process.env.REDIS_URL),
     ttl: parseInt(process.env.REDIS_CACHE_TTL, 10),
     upload: {
@@ -83,6 +83,7 @@ export function config(): IConfig {
       ttl: parseInt(process.env.THROTTLE_TTL, 10),
       limit: parseInt(process.env.THROTTLE_LIMIT, 10),
     },
+    twoFactorTime: parseInt(process.env.TWO_FACTOR_TIME, 10),
     testing,
   };
 }
