@@ -6,12 +6,12 @@
 
 import { registerEnumType } from '@nestjs/graphql';
 
-export enum NotificationTypeEnum {
+export enum ChangeTypeEnum {
   NEW = 'NEW',
   UPDATE = 'UPDATE',
   DELETE = 'DELETE',
 }
 
-registerEnumType(NotificationTypeEnum, {
-  name: 'NotificationType',
+registerEnumType(ChangeTypeEnum, {
+  name: 'ChangeType',
 });

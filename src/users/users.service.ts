@@ -8,28 +8,34 @@ import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import {
   BadRequestException,
+  CACHE_MANAGER,
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   LoggerService,
   UnauthorizedException,
 } from '@nestjs/common';
 import { compare, hash } from 'bcrypt';
-import { isInt } from 'class-validator';
+import { Cache } from 'cache-manager';
+import { ISessionsData } from '../auth/interfaces/session-data.interface';
 import { CommonService } from '../common/common.service';
-import { SLUG_REGEX } from '../common/constants/regex';
+import { SearchDto } from '../common/dtos/search.dto';
+import { CursorTypeEnum } from '../common/enums/cursor-type.enum';
+import { QueryOrderEnum } from '../common/enums/query-order.enum';
 import { RatioEnum } from '../common/enums/ratio.enum';
+import { IPaginated } from '../common/interfaces/paginated.interface';
 import { isNull, isUndefined } from '../config/utils/validation.util';
 import { PictureDto } from '../uploader/dtos/picture.dto';
 import { UploaderService } from '../uploader/uploader.service';
-import { ChangeEmailDto } from './dtos/change-email.dto';
-import { PasswordDto } from './dtos/password.dto';
-import { UpdateUserDto } from './dtos/update-user.dto';
+import { UpdateEmailDto } from './dtos/update-email.dto';
 import { UserEntity } from './entities/user.entity';
+import { OnlineStatusEnum } from './enums/online-status.enum';
 import { IUser } from './interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
+  private readonly queryName = 'u';
   private readonly loggerService: LoggerService;
 
   constructor(
@@ -37,6 +43,8 @@ export class UsersService {
     private readonly usersRepository: EntityRepository<UserEntity>,
     private readonly uploaderService: UploaderService,
     private readonly commonService: CommonService,
+    @Inject(CACHE_MANAGER)
+    private readonly cacheManager: Cache,
   ) {
     this.loggerService = new Logger(UsersService.name);
   }
@@ -57,26 +65,6 @@ export class UsersService {
     });
     await this.commonService.saveEntity(this.usersRepository, user, true);
     return user;
-  }
-
-  public async findOneByIdOrUsername(
-    idOrUsername: string,
-  ): Promise<UserEntity> {
-    const parsedValue = parseInt(idOrUsername, 10);
-
-    if (!isNaN(parsedValue) && parsedValue > 0 && isInt(parsedValue)) {
-      return this.findOneById(parsedValue);
-    }
-
-    if (
-      idOrUsername.length < 3 ||
-      idOrUsername.length > 106 ||
-      !SLUG_REGEX.test(idOrUsername)
-    ) {
-      throw new BadRequestException('Invalid username');
-    }
-
-    return this.findOneByUsername(idOrUsername);
   }
 
   public async findOneById(id: number): Promise<UserEntity> {
@@ -147,32 +135,6 @@ export class UsersService {
     return user;
   }
 
-  public async update(userId: number, dto: UpdateUserDto): Promise<UserEntity> {
-    const user = await this.findOneById(userId);
-    const { name, username } = dto;
-
-    if (!isUndefined(name) && !isNull(name)) {
-      if (name === user.name) {
-        throw new BadRequestException('Name must be different');
-      }
-
-      user.name = this.commonService.formatTitle(name);
-    }
-    if (!isUndefined(username) && !isNull(username)) {
-      const formattedUsername = dto.username.toLowerCase();
-
-      if (user.username === formattedUsername) {
-        throw new BadRequestException('Username should be different');
-      }
-
-      await this.checkUsernameUniqueness(formattedUsername);
-      user.username = formattedUsername;
-    }
-
-    await this.commonService.saveEntity(this.usersRepository, user);
-    return user;
-  }
-
   public async updatePassword(
     userId: number,
     password: string,
@@ -207,7 +169,7 @@ export class UsersService {
 
   public async updateEmail(
     userId: number,
-    dto: ChangeEmailDto,
+    dto: UpdateEmailDto,
   ): Promise<UserEntity> {
     const user = await this.findOneById(userId);
     const { email, password } = dto;
@@ -228,10 +190,10 @@ export class UsersService {
     return user;
   }
 
-  public async delete(userId: number, dto: PasswordDto): Promise<UserEntity> {
+  public async delete(userId: number, password: string): Promise<UserEntity> {
     const user = await this.findOneById(userId);
 
-    if (!(await compare(dto.password, user.password))) {
+    if (!(await compare(password, user.password))) {
       throw new BadRequestException('Wrong password');
     }
 
@@ -280,6 +242,70 @@ export class UsersService {
     return user;
   }
 
+  public async updateName(userId: number, name: string): Promise<UserEntity> {
+    const formatName = this.commonService.formatTitle(name);
+    const user = await this.findOneById(userId);
+    user.name = formatName;
+    user.username = await this.generateUsername(formatName);
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateUsername(
+    userId: number,
+    username: string,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    const formattedUsername = username.toLowerCase();
+    await this.checkUsernameUniqueness(formattedUsername);
+    user.username = formattedUsername;
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateOnlineStatus(
+    userId: number,
+    onlineStatus: OnlineStatusEnum,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    user.defaultStatus = onlineStatus;
+    const data = await this.cacheManager.get<ISessionsData>(
+      `sessions:${userId}`,
+    );
+
+    if (!isUndefined(data) && !isNull(data)) {
+      user.onlineStatus = onlineStatus;
+    }
+
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async query(dto: SearchDto): Promise<IPaginated<IUser>> {
+    const { search, first, after } = dto;
+    const qb = this.usersRepository.createQueryBuilder(this.queryName).where({
+      confirmed: true,
+    });
+
+    if (!isUndefined(search) && !isNull(search)) {
+      qb.andWhere({
+        name: {
+          $ilike: this.commonService.formatSearch(search),
+        },
+      });
+    }
+
+    return this.commonService.queryBuilderPagination(
+      this.queryName,
+      'username',
+      CursorTypeEnum.STRING,
+      first,
+      QueryOrderEnum.ASC,
+      qb,
+      after,
+    );
+  }
+
   private async checkUsernameUniqueness(username: string): Promise<void> {
     const count = await this.usersRepository.count({ username });
 
@@ -305,8 +331,6 @@ export class UsersService {
   }
 
   /**
-   * Generate Username
-   *
    * Generates a unique username using a point slug based on the name
    * and if it's already in use, it adds the usernames count to the end
    */

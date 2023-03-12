@@ -49,7 +49,7 @@ export class AuthService {
   private readonly accessTime: number;
   private readonly twoFactorPrefix = 'two_factor';
   private readonly blacklistPrefix = 'blacklist';
-  private readonly sessionPrefix = 'session';
+  private readonly sessionsPrefix = 'sessions';
 
   constructor(
     @Inject(CACHE_MANAGER)
@@ -219,7 +219,7 @@ export class AuthService {
       TokenTypeEnum.ACCESS,
     );
     const user = await this.usersService.findOneById(id);
-    const sessionKey = `${this.sessionPrefix}:${id}`;
+    const sessionKey = `${this.sessionsPrefix}:${id}`;
     const count = user.credentials.version;
     let sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionsData>(sessionKey),
@@ -245,7 +245,7 @@ export class AuthService {
 
   public async closeUserSession(ctx: IWsCtx): Promise<void> {
     const { userId, sessionId } = ctx;
-    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
     const sessionData = await this.getSessionData(ctx);
     delete sessionData.sessions[sessionId];
 
@@ -262,7 +262,7 @@ export class AuthService {
 
   public async refreshUserSession(ctx: IWsCtx): Promise<void> {
     const { userId, sessionId } = ctx;
-    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
     const sessionData = await this.getSessionData(ctx);
     const now = dayjs().unix();
 
@@ -294,7 +294,7 @@ export class AuthService {
 
   private async getSessionData(ctx: IWsCtx): Promise<ISessionsData> {
     const { userId, sessionId } = ctx;
-    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
     const sessionData = await this.commonService.throwInternalError(
       this.cacheManager.get<ISessionsData>(sessionKey),
     );

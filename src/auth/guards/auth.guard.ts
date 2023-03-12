@@ -11,8 +11,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { isJWT } from 'class-validator';
 import { FastifyRequest } from 'fastify';
+import { IGqlCtx } from '../../common/interfaces/gql-ctx.interface';
 import { isNull, isUndefined } from '../../config/utils/validation.util';
 import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
 import { JwtService } from '../../jwt/jwt.service';
@@ -30,16 +32,27 @@ export class AuthGuard implements CanActivate {
       context.getHandler(),
       context.getClass(),
     ]);
-    const activate = await this.setHttpHeader(
-      context.switchToHttp().getRequest<FastifyRequest>(),
-      isPublic,
-    );
 
-    if (!activate) {
-      throw new UnauthorizedException();
+    if (context.getType() === 'http') {
+      const activate = await this.setHttpHeader(
+        context.switchToHttp().getRequest<FastifyRequest>(),
+        isPublic,
+      );
+
+      if (!activate) {
+        throw new UnauthorizedException();
+      }
+
+      return activate;
     }
 
-    return activate;
+    const gqlCtx = GqlExecutionContext.create(context).getContext<IGqlCtx>();
+
+    if (!isUndefined(gqlCtx.ws) && !isNull(gqlCtx.ws)) {
+      return true;
+    }
+
+    return this.setHttpHeader(gqlCtx.reply.request, isPublic);
   }
 
   /**

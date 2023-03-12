@@ -5,10 +5,17 @@
 */
 
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import { GqlExecutionContext } from '@nestjs/graphql';
 import { FastifyRequest } from 'fastify';
+import { IGqlCtx } from '../../common/interfaces/gql-ctx.interface';
 
 export const CurrentUser = createParamDecorator(
   (_, context: ExecutionContext): number | undefined => {
-    return context.switchToHttp().getRequest<FastifyRequest>()?.user;
+    if (context.getType() === 'http') {
+      return context.switchToHttp().getRequest<FastifyRequest>()?.user;
+    }
+
+    const gqlCtx = GqlExecutionContext.create(context).getContext<IGqlCtx>();
+    return gqlCtx.reply.request?.user ?? gqlCtx?.ws?.userId;
   },
 );

@@ -178,19 +178,6 @@ $ yarn start:dev
 
 ## Unit Testing
 
-### BEFORE EACH TEST (Individual or All):
-
-* Check if NODE_ENV is not production;
-* Remove the current test.db (if exits);
-* Create a new test.db.
-
-```bash
-# remove test.db
-$ rm test.db
-# create a new test.db
-$ yarn migrate:create
-```
-
 ### All tests:
 
 ```bash

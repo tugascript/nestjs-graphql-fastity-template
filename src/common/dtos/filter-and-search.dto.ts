@@ -7,10 +7,10 @@
 import { ArgsType, Field } from '@nestjs/graphql';
 import { IsOptional, IsString, Length, Matches } from 'class-validator';
 import { NAME_REGEX } from '../constants/regex';
-import { PaginationDto } from './pagination.dto';
+import { FilterDto } from './filter.dto';
 
 @ArgsType()
-export abstract class SearchDto extends PaginationDto {
+export abstract class FilterAndSearchDto extends FilterDto {
   @Field(() => String, { nullable: true })
   @IsString()
   @Length(1, 100, {

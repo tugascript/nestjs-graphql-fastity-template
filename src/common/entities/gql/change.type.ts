@@ -6,22 +6,22 @@
 
 import { Type } from '@nestjs/common';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { NotificationTypeEnum } from '../../enums/notification-type.enum';
-import { INotification } from '../../interfaces/notification.interface';
+import { ChangeTypeEnum } from '../../enums/change-type.enum';
+import { IChange } from '../../interfaces/change.interface';
 import { Edge } from './edge.type';
 
-export function Notification<T>(classRef: Type<T>): Type<INotification<T>> {
+export function Change<T>(classRef: Type<T>): Type<IChange<T>> {
   @ObjectType(`${classRef.name}NotificationEdge`)
   abstract class EdgeType extends Edge(classRef) {}
 
   @ObjectType({ isAbstract: true })
-  abstract class NotificationType {
-    @Field(() => NotificationTypeEnum)
-    public type: NotificationTypeEnum;
+  abstract class ChangeType implements IChange<T> {
+    @Field(() => ChangeTypeEnum)
+    public type: ChangeTypeEnum;
 
     @Field(() => EdgeType)
     public edge: EdgeType;
   }
 
-  return NotificationType as Type<INotification<T>>;
+  return ChangeType as Type<IChange<T>>;
 }

@@ -17,8 +17,8 @@ import { validate } from 'class-validator';
 import slugify from 'slugify';
 import { v4 as uuidV4 } from 'uuid';
 import { isNull, isUndefined } from '../config/utils/validation.util';
+import { ChangeTypeEnum } from './enums/change-type.enum';
 import { CursorTypeEnum } from './enums/cursor-type.enum';
-import { NotificationTypeEnum } from './enums/notification-type.enum';
 import {
   getOppositeOrder,
   getQueryOrder,
@@ -26,14 +26,12 @@ import {
   tOppositeOrder,
   tOrderEnum,
 } from './enums/query-order.enum';
-import { INotification } from './interfaces/notification.interface';
+import { IChange } from './interfaces/change.interface';
 import { IEdge, IPaginated } from './interfaces/paginated.interface';
 
 @Injectable()
 export class CommonService {
   /**
-   * Encode Cursor
-   *
    * Takes a date, string or number and returns the base 64
    * representation of it
    */
@@ -52,8 +50,6 @@ export class CommonService {
   }
 
   /**
-   * Create Edge
-   *
    * Takes an instance, the cursor key and a innerCursor,
    * and generates a GraphQL edge
    */
@@ -75,8 +71,6 @@ export class CommonService {
   }
 
   /**
-   * Get Order By
-   *
    * Makes the order by query for MikroORM orderBy method.
    */
   private static getOrderBy<T>(
@@ -96,8 +90,6 @@ export class CommonService {
   }
 
   /**
-   * Get Filters
-   *
    * Gets the where clause filter logic for the query builder pagination
    */
   private static getFilters<T>(
@@ -121,11 +113,7 @@ export class CommonService {
         };
   }
 
-  //-------------------- Pagination --------------------
-
   /**
-   * Paginate
-   *
    * Takes an entity array and returns the paginated type of that entity array
    * It uses cursor pagination as recommended in https://relay.dev/graphql/connections.htm
    */
@@ -166,8 +154,6 @@ export class CommonService {
   }
 
   /**
-   * Decode Cursor
-   *
    * Takes a base64 cursor and returns the string or number value
    */
   public decodeCursor(
@@ -202,18 +188,16 @@ export class CommonService {
   }
 
   /**
-   * Query Builder Pagination
-   *
    * Takes a query builder and returns the entities paginated
    */
   public async queryBuilderPagination<T extends Dictionary>(
     alias: string,
     cursor: keyof T,
+    cursorType: CursorTypeEnum,
     first: number,
     order: QueryOrderEnum,
     qb: QueryBuilder<T>,
     after?: string,
-    cursorType = CursorTypeEnum.STRING,
     innerCursor?: string,
   ): Promise<IPaginated<T>> {
     const strCursor = String(cursor); // because of runtime issues
@@ -258,8 +242,6 @@ export class CommonService {
   }
 
   /**
-   * Find And Count Pagination
-   *
    * Takes an entity repository and a FilterQuery and returns the paginated
    * entities
    */
@@ -312,30 +294,22 @@ export class CommonService {
     );
   }
 
-  //-------------------- Notification Generation --------------------
-
   /**
-   * Generate Notification
-   *
-   * Generates an entity notification. This is useful for realtime apps only.
+   * Generates an entity change notification. This is useful for realtime apps only.
    */
-  public generateNotification<T>(
+  public generateChange<T>(
     entity: T,
-    nType: NotificationTypeEnum,
+    nType: ChangeTypeEnum,
     cursor: keyof T,
     innerCursor?: string,
-  ): INotification<T> {
+  ): IChange<T> {
     return {
       edge: CommonService.createEdge(entity, cursor, innerCursor),
       type: nType,
     };
   }
 
-  //-------------------- String Formatting --------------------
-
   /**
-   * Format Title
-   *
    * Takes a string trims it and capitalizes every word
    */
   public formatTitle(title: string): string {
@@ -347,8 +321,6 @@ export class CommonService {
   }
 
   /**
-   * Format Search
-   *
    * Takes a string trims it and makes it lower case to be used in ILike
    */
   public formatSearch(search: string): string {
@@ -360,8 +332,6 @@ export class CommonService {
   }
 
   /**
-   * Generate Point Slug
-   *
    * Takes a string and generates a slug with dots as word separators
    */
   public generatePointSlug(str: string): string {
@@ -369,8 +339,6 @@ export class CommonService {
   }
 
   /**
-   * Generate Slug
-   *
    * Takes a string and generates a slug with a unique identifier at the end
    */
   public generateSlug(str: string): string {
@@ -379,8 +347,6 @@ export class CommonService {
       remove: /['_\.]/g,
     });
   }
-
-  //-------------------- Entity Validations --------------------
 
   public checkEntityExistence<T extends Dictionary>(
     entity: T | null | undefined,
@@ -392,8 +358,6 @@ export class CommonService {
   }
 
   /**
-   * Validate Entity
-   *
    * Validates an entity with the class-validator library
    */
   public async validateEntity(entity: Dictionary): Promise<void> {
@@ -406,8 +370,6 @@ export class CommonService {
   //-------------------- Entity Actions --------------------
 
   /**
-   * Save Entity
-   *
    * Validates, saves and flushes entity into the DB
    */
   public async saveEntity<T extends Dictionary>(
@@ -423,8 +385,6 @@ export class CommonService {
   }
 
   /**
-   * Remove Entity
-   *
    * Removes an entity from the DB.
    */
   public async removeEntity<T extends Dictionary>(
@@ -437,8 +397,6 @@ export class CommonService {
   //-------------------- Error Handling --------------------
 
   /**
-   * Throw Duplicate Error
-   *
    * Checks is an error is of the code 23505, PostgreSQL's duplicate value error,
    * and throws a conflict exception
    */
@@ -453,8 +411,6 @@ export class CommonService {
   }
 
   /**
-   * Throw Internal Error
-   *
    * Function to abstract throwing internal server exception
    */
   public async throwInternalError<T>(promise: Promise<T>): Promise<T> {

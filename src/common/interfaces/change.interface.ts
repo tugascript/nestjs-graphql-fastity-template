@@ -4,10 +4,10 @@
   Afonso Barracha
 */
 
-import { NotificationTypeEnum } from '../enums/notification-type.enum';
+import { ChangeTypeEnum } from '../enums/change-type.enum';
 import { IEdge } from './paginated.interface';
 
-export interface INotification<T> {
-  type: NotificationTypeEnum;
+export interface IChange<T> {
+  type: ChangeTypeEnum;
   edge: IEdge<T>;
 }
