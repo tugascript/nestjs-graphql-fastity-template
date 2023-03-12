@@ -13,7 +13,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { isJWT } from 'class-validator';
 import { FastifyRequest } from 'fastify';
-import { isNull, isUndefined } from '../../common/utils/validation.util';
+import { isNull, isUndefined } from '../../config/utils/validation.util';
 import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
 import { JwtService } from '../../jwt/jwt.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';

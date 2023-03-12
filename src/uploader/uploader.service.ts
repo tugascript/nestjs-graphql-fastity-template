@@ -22,16 +22,18 @@ import { MAX_WIDTH, QUALITY_ARRAY } from './utils/uploader.constants';
 
 @Injectable()
 export class UploaderService {
-  private readonly client = new S3Client(
-    this.configService.get<S3ClientConfig>('bucketConfig'),
-  );
-  private readonly bucketData =
-    this.configService.get<IBucketData>('bucketData');
+  private readonly client: S3Client;
+  private readonly bucketData: IBucketData;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly commonService: CommonService,
-  ) {}
+  ) {
+    this.client = new S3Client(
+      this.configService.get<S3ClientConfig>('bucketConfig'),
+    );
+    this.bucketData = this.configService.get<IBucketData>('bucketData');
+  }
 
   private static validateImage(mimetype: string): string | false {
     const val = mimetype.split('/');

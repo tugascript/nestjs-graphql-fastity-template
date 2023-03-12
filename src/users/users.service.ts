@@ -10,27 +10,36 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
+  LoggerService,
   UnauthorizedException,
 } from '@nestjs/common';
 import { compare, hash } from 'bcrypt';
 import { isInt } from 'class-validator';
 import { CommonService } from '../common/common.service';
 import { SLUG_REGEX } from '../common/constants/regex';
+import { RatioEnum } from '../common/enums/ratio.enum';
 import { isNull, isUndefined } from '../config/utils/validation.util';
+import { PictureDto } from '../uploader/dtos/picture.dto';
+import { UploaderService } from '../uploader/uploader.service';
 import { ChangeEmailDto } from './dtos/change-email.dto';
 import { PasswordDto } from './dtos/password.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import { UserEntity } from './entities/user.entity';
-
-// todo: add update user last login , last online and status
+import { IUser } from './interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
+  private readonly loggerService: LoggerService;
+
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: EntityRepository<UserEntity>,
+    private readonly uploaderService: UploaderService,
     private readonly commonService: CommonService,
-  ) {}
+  ) {
+    this.loggerService = new Logger(UsersService.name);
+  }
 
   public async create(
     email: string,
@@ -227,6 +236,47 @@ export class UsersService {
     }
 
     await this.commonService.removeEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateInternal(
+    user: UserEntity,
+    data: Partial<IUser>,
+  ): Promise<void> {
+    Object.entries(data).forEach(([key, value]) => {
+      if (isUndefined(value)) {
+        return;
+      }
+      user[key] = value;
+    });
+    await this.commonService.saveEntity(this.usersRepository, user);
+  }
+
+  public async updatePicture(
+    userId: number,
+    dto: PictureDto,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    const oldPicture = user.picture;
+    const { picture } = dto;
+    user.picture = await this.uploaderService.uploadImage(
+      userId,
+      picture,
+      RatioEnum.SQUARE,
+    );
+
+    if (!isUndefined(oldPicture) && !isNull(oldPicture)) {
+      this.uploaderService
+        .deleteFile(oldPicture)
+        .then(() => {
+          this.loggerService.log(`Deleted old picture: ${oldPicture}`);
+        })
+        .catch(() => {
+          this.loggerService.error(`Error deleting old picture: ${oldPicture}`);
+        });
+    }
+
+    await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
 

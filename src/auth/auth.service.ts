@@ -17,9 +17,11 @@ import { Cache } from 'cache-manager';
 import { isEmail } from 'class-validator';
 import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
+import { v4 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { SLUG_REGEX } from '../common/constants/regex';
 import { LocalMessageType } from '../common/entities/gql/message.type';
+import { IWsCtx } from '../config/interfaces/ws-ctx.interface';
 import { isNull, isUndefined } from '../config/utils/validation.util';
 import { EmailService } from '../email/email.service';
 import { TokenTypeEnum } from '../jwt/enums/token-type.enum';
@@ -28,6 +30,7 @@ import { IEmailToken } from '../jwt/interfaces/email-token.interface';
 import { IRefreshToken } from '../jwt/interfaces/refresh-token.interface';
 import { JwtService } from '../jwt/jwt.service';
 import { UserEntity } from '../users/entities/user.entity';
+import { OnlineStatusEnum } from '../users/enums/online-status.enum';
 import { ICredentials } from '../users/interfaces/credentials.interface';
 import { UsersService } from '../users/users.service';
 import { ChangePasswordDto } from './dtos/change-password.dto';
@@ -37,13 +40,13 @@ import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
-
-// todo: add old GraphQL session authentication, and add two factor authentication
+import { ISessionsData } from './interfaces/session-data.interface';
 
 @Injectable()
 export class AuthService {
   private readonly sessionTime: number;
   private readonly twoFactorTime: number;
+  private readonly accessTime: number;
   private readonly twoFactorPrefix = 'two_factor';
   private readonly blacklistPrefix = 'blacklist';
   private readonly sessionPrefix = 'session';
@@ -59,6 +62,7 @@ export class AuthService {
   ) {
     this.sessionTime = this.configService.get<number>('sessionTime');
     this.twoFactorTime = this.configService.get<number>('twoFactorTime');
+    this.accessTime = this.configService.get<number>('jwt.access.time');
   }
 
   private static generateAccessCode(): string {
@@ -122,7 +126,7 @@ export class AuthService {
     if (user.twoFactor) {
       return this.saveTwoFactorCode(user);
     }
-
+    await this.usersService.updateInternal(user, { lastLogin: new Date() });
     const [accessToken, refreshToken] = await this.generateAuthTokens(
       user,
       domain,
@@ -233,11 +237,79 @@ export class AuthService {
       user.onlineStatus = user.defaultStatus;
     }
 
-    const sessionId = uuidV4();
+    const sessionId = v4();
     sessionData.sessions[sessionId] = dayjs().unix();
     await this.saveSessionData(sessionKey, sessionData);
-
     return [id, sessionId];
+  }
+
+  public async closeUserSession(ctx: IWsCtx): Promise<void> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionData = await this.getSessionData(ctx);
+    delete sessionData.sessions[sessionId];
+
+    if (Object.keys(sessionData.sessions).length === 0) {
+      await this.commonService.throwInternalError(
+        this.cacheManager.del(sessionKey),
+      );
+      await this.makeUserOffline(userId);
+      return;
+    }
+
+    await this.saveSessionData(sessionKey, sessionData);
+  }
+
+  public async refreshUserSession(ctx: IWsCtx): Promise<void> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionData = await this.getSessionData(ctx);
+    const now = dayjs().unix();
+
+    if (now - sessionData.sessions[sessionId] < this.accessTime) {
+      return;
+    }
+
+    const user = await this.usersService.findOneById(userId);
+
+    if (user.credentials.version !== sessionData.count) {
+      await this.commonService.throwInternalError(
+        this.cacheManager.del(sessionKey),
+      );
+      await this.makeUserOffline(userId);
+      throw new UnauthorizedException('Session has expired');
+    }
+
+    sessionData.sessions[sessionId] = now;
+    await this.saveSessionData(sessionKey, sessionData);
+  }
+
+  private async makeUserOffline(userId: number): Promise<void> {
+    const user = await this.usersService.findOneById(userId);
+    await this.usersService.updateInternal(user, {
+      lastOnline: new Date(),
+      onlineStatus: OnlineStatusEnum.OFFLINE,
+    });
+  }
+
+  private async getSessionData(ctx: IWsCtx): Promise<ISessionsData> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionPrefix}:${userId}`;
+    const sessionData = await this.commonService.throwInternalError(
+      this.cacheManager.get<ISessionsData>(sessionKey),
+    );
+
+    if (
+      isUndefined(sessionData) ||
+      isNull(sessionData) ||
+      isUndefined(sessionData.sessions[sessionId]) ||
+      isNull(sessionData.sessions[sessionId])
+    ) {
+      await this.makeUserOffline(userId);
+      throw new UnauthorizedException('Invalid session');
+    }
+
+    return sessionData;
   }
 
   private async checkLastPassword(
@@ -371,5 +443,14 @@ export class AuthService {
     );
     this.emailService.sendAccessCode(user, code);
     return new LocalMessageType('Two factor code sent');
+  }
+
+  private async saveSessionData(
+    sessionKey: string,
+    sessionData: ISessionsData,
+  ): Promise<void> {
+    await this.commonService.throwInternalError(
+      this.cacheManager.set(sessionKey, sessionData, this.sessionTime * 1000),
+    );
   }
 }
