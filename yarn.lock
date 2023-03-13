@@ -3193,15 +3193,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/graphql-upload@npm:^15.0.0":
-  version: 15.0.2
-  resolution: "@types/graphql-upload@npm:15.0.2"
+"@types/graphql-upload@npm:^16.0.0":
+  version: 16.0.0
+  resolution: "@types/graphql-upload@npm:16.0.0"
   dependencies:
     "@types/express": "*"
     "@types/koa": "*"
     fs-capacitor: ^8.0.0
     graphql: 0.13.1 - 16
-  checksum: 3e88a03082ce1e1de39b414a096fbd47cf1f97b6027c93cc71a216229bdfb248f54f1afc209e970e1ae3856153c20cf40d458febe348b287be237f62ea84ffc0
+  checksum: 869f21b7b12327d2541c2f57db45c5bd78dcdaf30a96372706e720b8c270b0b2eb7b9e5266abb9e919532e3943697ae46807612991469b8773a82fdf5a9dcb86
   languageName: node
   linkType: hard
 
@@ -8789,7 +8789,7 @@ __metadata:
     "@nestjs/throttler": ^4.0.0
     "@types/bcrypt": ^5.0.0
     "@types/cache-manager": ^4.0.2
-    "@types/graphql-upload": ^15.0.0
+    "@types/graphql-upload": ^16.0.0
     "@types/jest": 29.4.0
     "@types/jsonwebtoken": ^9.0.0
     "@types/node": ^18.11.12
