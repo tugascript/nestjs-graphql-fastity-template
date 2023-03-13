@@ -21,6 +21,7 @@ import { v4 } from 'uuid';
 import { CommonService } from '../common/common.service';
 import { SLUG_REGEX } from '../common/constants/regex';
 import { LocalMessageType } from '../common/entities/gql/message.type';
+import { IUnion } from '../common/interfaces/union.interface';
 import { IWsCtx } from '../config/interfaces/ws-ctx.interface';
 import { isNull, isUndefined } from '../config/utils/validation.util';
 import { EmailService } from '../email/email.service';
@@ -105,7 +106,9 @@ export class AuthService {
   public async signIn(
     dto: SignInDto,
     domain?: string,
-  ): Promise<IAuthResult | LocalMessageType> {
+  ): Promise<
+    IUnion<'auth', IAuthResult> | IUnion<'message', LocalMessageType>
+  > {
     const { emailOrUsername, password } = dto;
     const user = await this.userByEmailOrUsername(emailOrUsername);
 
@@ -124,14 +127,20 @@ export class AuthService {
       );
     }
     if (user.twoFactor) {
-      return this.saveTwoFactorCode(user);
+      return {
+        title: 'message',
+        value: await this.saveTwoFactorCode(user),
+      };
     }
     await this.usersService.updateInternal(user, { lastLogin: new Date() });
     const [accessToken, refreshToken] = await this.generateAuthTokens(
       user,
       domain,
     );
-    return { user, accessToken, refreshToken };
+    return {
+      title: 'auth',
+      value: { user, accessToken, refreshToken },
+    };
   }
 
   public async refreshTokenAccess(

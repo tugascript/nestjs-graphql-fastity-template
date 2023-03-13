@@ -101,9 +101,15 @@ export class AuthController {
     @Body() singInDto: SignInDto,
   ): Promise<void> {
     const result = await this.authService.signIn(singInDto, origin);
-    this.saveRefreshCookie(res, result.refreshToken)
+
+    if (result.title === 'message') {
+      res.status(HttpStatus.OK).send(result.value);
+      return;
+    }
+
+    this.saveRefreshCookie(res, result.value.refreshToken)
       .status(HttpStatus.OK)
-      .send(AuthResponseMapper.map(result));
+      .send(AuthResponseMapper.map(result.value));
   }
 
   @Public()
