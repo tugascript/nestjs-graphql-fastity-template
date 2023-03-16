@@ -8322,14 +8322,14 @@ __metadata:
   linkType: hard
 
 "mercurius-upload@npm:^6.0.0":
-  version: 6.0.0
-  resolution: "mercurius-upload@npm:6.0.0"
+  version: 6.0.1
+  resolution: "mercurius-upload@npm:6.0.1"
   dependencies:
     fastify-plugin: ^4.2.0
     graphql-upload: ^15.0.1
   peerDependencies:
     graphql: ^16.3.0
-  checksum: e0ccbf9bbd286ab640b5d854c2f2d9a6881b28b7514d1eb626eafa19f401d2e422a8ff3a78b529712de991a228122abbdec8de4a38837f4f22fd83f92f670f2c
+  checksum: 67fbd181b2a19de379b98dc5ac75d328c0f1cc6d778f7710470a76b8c2877ac126882092bb85aef701c7fedf03baf095705382a58d22488d4c4559687d454d04
   languageName: node
   linkType: hard
 
