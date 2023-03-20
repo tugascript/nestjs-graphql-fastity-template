@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { faker } from '@faker-js/faker';
@@ -16,15 +25,15 @@ import { isJWT, isUUID } from 'class-validator';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
 import { config } from '../../config';
-import { validationSchema } from '../../config/config.schema';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
 import { ThrottlerConfig } from '../../config/throttler.config';
+import { validationSchema } from '../../config/validation.config';
+import { EmailModule } from '../../email/email.module';
+import { EmailService } from '../../email/email.service';
 import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
 import { IRefreshToken } from '../../jwt/interfaces/refresh-token.interface';
 import { JwtModule } from '../../jwt/jwt.module';
 import { JwtService } from '../../jwt/jwt.service';
-import { MailerModule } from '../../mailer/mailer.module';
-import { MailerService } from '../../mailer/mailer.service';
 import { UserEntity } from '../../users/entities/user.entity';
 import { IUser } from '../../users/interfaces/user.interface';
 import { UsersModule } from '../../users/users.module';
@@ -34,7 +43,7 @@ import { AuthService } from '../auth.service';
 describe('AuthService', () => {
   let module: TestingModule,
     authService: AuthService,
-    mailerService: MailerService,
+    emailService: EmailService,
     usersService: UsersService,
     jwtService: JwtService,
     commonService: CommonService,
@@ -60,7 +69,7 @@ describe('AuthService', () => {
         CommonModule,
         UsersModule,
         JwtModule,
-        MailerModule,
+        EmailModule,
         ThrottlerModule.forRootAsync({
           imports: [ConfigModule],
           useClass: ThrottlerConfig,
@@ -70,7 +79,7 @@ describe('AuthService', () => {
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
-    mailerService = module.get<MailerService>(MailerService);
+    emailService = module.get<EmailService>(EmailService);
     usersService = module.get<UsersService>(UsersService);
     jwtService = module.get<JwtService>(JwtService);
     commonService = module.get<CommonService>(CommonService);
@@ -78,7 +87,7 @@ describe('AuthService', () => {
     orm = module.get<MikroORM>(MikroORM);
     await orm.getSchemaGenerator().createSchema();
 
-    jest.spyOn(mailerService, 'sendEmail').mockImplementation();
+    jest.spyOn(emailService, 'sendEmail').mockImplementation();
   });
 
   const name = faker.name.firstName();
@@ -95,7 +104,7 @@ describe('AuthService', () => {
   it('should be defined', () => {
     expect(module).toBeDefined();
     expect(authService).toBeDefined();
-    expect(mailerService).toBeDefined();
+    expect(emailService).toBeDefined();
     expect(usersService).toBeDefined();
     expect(jwtService).toBeDefined();
     expect(commonService).toBeDefined();
@@ -105,7 +114,7 @@ describe('AuthService', () => {
 
   describe('sign up', () => {
     it('should create a new user', async () => {
-      jest.spyOn(mailerService, 'sendConfirmationEmail').mockImplementation();
+      jest.spyOn(emailService, 'sendConfirmationEmail').mockImplementation();
 
       const message = await authService.signUp({
         name,
@@ -115,7 +124,7 @@ describe('AuthService', () => {
       });
       expect(message.message).toStrictEqual('Registration successful');
       expect(isUUID(message.id)).toBe(true);
-      expect(mailerService.sendConfirmationEmail).toHaveBeenCalled();
+      expect(emailService.sendConfirmationEmail).toHaveBeenCalled();
     });
 
     it('should throw an error if the passwords do not match', async () => {
@@ -192,27 +201,35 @@ describe('AuthService', () => {
 
   describe('sign in', () => {
     it('should sign in an user by email', async () => {
-      const result = await authService.signIn({
+      const { title, value } = await authService.signIn({
         emailOrUsername: email,
         password,
       });
-      expect(result.user).toBeInstanceOf(UserEntity);
-      expect(result.accessToken).toBeDefined();
-      expect(isJWT(result.accessToken)).toBe(true);
-      expect(result.refreshToken).toBeDefined();
-      expect(isJWT(result.refreshToken)).toBe(true);
+      expect(title).toStrictEqual('auth');
+
+      if (title === 'auth') {
+        expect(value.user).toBeInstanceOf(UserEntity);
+        expect(value.accessToken).toBeDefined();
+        expect(isJWT(value.accessToken)).toBe(true);
+        expect(value.refreshToken).toBeDefined();
+        expect(isJWT(value.refreshToken)).toBe(true);
+      }
     });
 
     it('should sign in an user by username', async () => {
-      const result = await authService.signIn({
+      const { title, value } = await authService.signIn({
         emailOrUsername: commonService.generatePointSlug(name),
         password,
       });
-      expect(result.user).toBeInstanceOf(UserEntity);
-      expect(result.accessToken).toBeDefined();
-      expect(isJWT(result.accessToken)).toBe(true);
-      expect(result.refreshToken).toBeDefined();
-      expect(isJWT(result.refreshToken)).toBe(true);
+      expect(title).toStrictEqual('auth');
+
+      if (title === 'auth') {
+        expect(value.user).toBeInstanceOf(UserEntity);
+        expect(value.accessToken).toBeDefined();
+        expect(isJWT(value.accessToken)).toBe(true);
+        expect(value.refreshToken).toBeDefined();
+        expect(isJWT(value.refreshToken)).toBe(true);
+      }
     });
 
     it('should throw an unauthorized exception if the password is wrong', async () => {
@@ -331,12 +348,12 @@ describe('AuthService', () => {
 
   describe('reset password email', () => {
     it('should send the reset password email', async () => {
-      jest.spyOn(mailerService, 'sendResetPasswordEmail').mockImplementation();
+      jest.spyOn(emailService, 'sendResetPasswordEmail').mockImplementation();
 
       const message = await authService.resetPasswordEmail({ email });
       expect(message.message).toStrictEqual('Reset password email sent');
       expect(isUUID(message.id)).toBe(true);
-      expect(mailerService.sendResetPasswordEmail).toBeCalledTimes(1);
+      expect(emailService.sendResetPasswordEmail).toBeCalledTimes(1);
     });
 
     it('should not sent the reset password email', async () => {
@@ -345,7 +362,7 @@ describe('AuthService', () => {
       });
       expect(message.message).toStrictEqual('Reset password email sent');
       expect(isUUID(message.id)).toBe(true);
-      expect(mailerService.sendResetPasswordEmail).toBeCalledTimes(1);
+      expect(emailService.sendResetPasswordEmail).toBeCalledTimes(1);
     });
   });
 

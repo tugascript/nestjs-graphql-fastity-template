@@ -1,13 +1,21 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import {
   Body,
   Controller,
-  Get,
   HttpCode,
   HttpStatus,
   Patch,
@@ -35,14 +43,13 @@ import { CurrentUser } from './decorators/current-user.decorator';
 import { Origin } from './decorators/origin.decorator';
 import { Public } from './decorators/public.decorator';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { ChangeTwoFactorDto } from './dtos/change-two-factor.dto';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
 import { EmailDto } from './dtos/email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { FastifyThrottlerGuard } from './guards/fastify-throttler.guard';
-import { IAuthResponseUser } from './interfaces/auth-response-user.interface';
-import { AuthResponseUserMapper } from './mappers/auth-response-user.mapper';
 import { AuthResponseMapper } from './mappers/auth-response.mapper';
 
 @ApiTags('Auth')
@@ -243,17 +250,31 @@ export class AuthController {
       .send(AuthResponseMapper.map(result));
   }
 
-  @Get('/me')
+  @Patch('/update-two-factor')
   @ApiOkResponse({
-    type: AuthResponseUserMapper,
-    description: 'The user is found and returned.',
+    type: AuthResponseMapper,
+    description: 'The two factor has been updated',
   })
   @ApiUnauthorizedResponse({
     description: 'The user is not logged in.',
   })
-  public async getMe(@CurrentUser() id: number): Promise<IAuthResponseUser> {
-    const user = await this.usersService.findOneById(id);
-    return AuthResponseUserMapper.map(user);
+  public async updateTwoFactor(
+    @CurrentUser() userId: number,
+    @Origin() origin: string | undefined,
+    @Req() req: FastifyRequest,
+    @Body() changeTwoFactorDto: ChangeTwoFactorDto,
+    @Res() res: FastifyReply,
+  ) {
+    const token = this.refreshTokenFromReq(req);
+    const result = await this.authService.updateTwoFactor(
+      userId,
+      changeTwoFactorDto.twoFactor,
+      token,
+      origin,
+    );
+    this.saveRefreshCookie(res, result.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result));
   }
 
   private refreshTokenFromReq(req: FastifyRequest): string {

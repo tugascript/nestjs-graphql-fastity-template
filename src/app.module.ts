@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { MikroOrmModule } from '@mikro-orm/nestjs';
@@ -14,16 +23,16 @@ import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { CommonModule } from './common/common.module';
+import { config } from './config';
 import { CacheConfig } from './config/cache.config';
-import { config } from './config/config';
 import { GqlConfigService } from './config/graphql.config';
 import { MikroOrmConfig } from './config/mikroorm.config';
-import { validationSchema } from './config/validation';
+import { validationSchema } from './config/validation.config';
 import { EmailModule } from './email/email.module';
+import { JwtModule } from './jwt/jwt.module';
 import { LoadersModule } from './loaders/loaders.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
-import { JwtModule } from './jwt/jwt.module';
 
 @Module({
   imports: [

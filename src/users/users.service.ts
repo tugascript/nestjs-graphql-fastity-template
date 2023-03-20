@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { InjectRepository } from '@mikro-orm/nestjs';
@@ -169,10 +178,10 @@ export class UsersService {
 
   public async updateEmail(
     userId: number,
-    dto: UpdateEmailDto,
+    updateEmailDto: UpdateEmailDto,
   ): Promise<UserEntity> {
     const user = await this.findOneById(userId);
-    const { email, password } = dto;
+    const { email, password } = updateEmailDto;
 
     if (!(await compare(password, user.password))) {
       throw new BadRequestException('Wrong password');
@@ -216,11 +225,11 @@ export class UsersService {
 
   public async updatePicture(
     userId: number,
-    dto: PictureDto,
+    updateDto: PictureDto,
   ): Promise<UserEntity> {
     const user = await this.findOneById(userId);
     const oldPicture = user.picture;
-    const { picture } = dto;
+    const { picture } = updateDto;
     user.picture = await this.uploaderService.uploadImage(
       userId,
       picture,

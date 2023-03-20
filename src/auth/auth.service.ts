@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import {
@@ -96,11 +105,7 @@ export class AuthService {
       TokenTypeEnum.CONFIRMATION,
     );
     const user = await this.usersService.confirmEmail(id, version);
-    const [accessToken, refreshToken] = await this.generateAuthTokens(
-      user,
-      domain,
-    );
-    return { user, accessToken, refreshToken };
+    return this.generateAuthResult(user, domain);
   }
 
   public async signIn(
@@ -133,13 +138,9 @@ export class AuthService {
       };
     }
     await this.usersService.updateInternal(user, { lastLogin: new Date() });
-    const [accessToken, refreshToken] = await this.generateAuthTokens(
-      user,
-      domain,
-    );
     return {
       title: 'auth',
-      value: { user, accessToken, refreshToken },
+      value: await this.generateAuthResult(user, domain),
     };
   }
 
@@ -154,12 +155,30 @@ export class AuthService {
       );
     await this.checkIfTokenIsBlacklisted(id, tokenId);
     const user = await this.usersService.findOneByCredentials(id, version);
-    const [accessToken, newRefreshToken] = await this.generateAuthTokens(
-      user,
-      domain,
-      tokenId,
-    );
-    return { user, accessToken, refreshToken: newRefreshToken };
+    return this.generateAuthResult(user, domain, tokenId);
+  }
+
+  public async updateTwoFactor(
+    userId: number,
+    twoFactor: boolean,
+    refreshToken: string,
+    domain?: string,
+  ): Promise<IAuthResult> {
+    const user = await this.usersService.findOneById(userId);
+
+    if (user.twoFactor === twoFactor) {
+      const { tokenId } = await this.jwtService.verifyToken<IRefreshToken>(
+        refreshToken,
+        TokenTypeEnum.REFRESH,
+      );
+      return this.generateAuthResult(user, domain, tokenId);
+    }
+    if (twoFactor) {
+      user.credentials.updateVersion();
+    }
+
+    await this.usersService.updateInternal(user, { twoFactor });
+    return this.generateAuthResult(user, domain);
   }
 
   public async logout(refreshToken: string): Promise<LocalMessageType> {
@@ -291,6 +310,19 @@ export class AuthService {
 
     sessionData.sessions[sessionId] = now;
     await this.saveSessionData(sessionKey, sessionData);
+  }
+
+  private async generateAuthResult(
+    user: UserEntity,
+    domain?: string,
+    tokenId?: string,
+  ): Promise<IAuthResult> {
+    const [accessToken, refreshToken] = await this.generateAuthTokens(
+      user,
+      domain,
+      tokenId,
+    );
+    return { user, accessToken, refreshToken };
   }
 
   private async makeUserOffline(userId: number): Promise<void> {

@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { faker } from '@faker-js/faker';
@@ -13,9 +22,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { compare } from 'bcrypt';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
-import { config } from '../../config';
-import { validationSchema } from '../../config/config.schema';
+import { validationSchema } from '../../config/index.schema';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
+import { config } from '../../index';
 import { UserEntity } from '../entities/user.entity';
 import { UsersService } from '../users.service';
 

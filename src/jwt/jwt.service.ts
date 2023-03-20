@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import {
@@ -37,8 +46,8 @@ export class JwtService {
     private readonly commonService: CommonService,
   ) {
     this.jwtConfig = this.configService.get<IJwt>('jwt');
-    this.issuer = this.configService.get<string>('id');
-    this.domain = this.configService.get<string>('domain');
+    this.issuer = this.configService.get<string>('APP_ID');
+    this.domain = this.configService.get<string>('DOMAIN');
   }
 
   private static async generateTokenAsync(

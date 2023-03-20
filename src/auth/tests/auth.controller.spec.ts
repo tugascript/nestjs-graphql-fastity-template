@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { faker } from '@faker-js/faker';
@@ -12,28 +21,24 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CommonModule } from '../../common/common.module';
-import { MessageMapper } from '../../common/mappers/message.mapper';
-import { createRequestMock } from '../../common/tests/mocks/request.mock';
-import { createResponseMock } from '../../common/tests/mocks/response.mock';
 import { config } from '../../config';
-import { validationSchema } from '../../config/config.schema';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
 import { ThrottlerConfig } from '../../config/throttler.config';
+import { validationSchema } from '../../config/validation.config';
+import { EmailModule } from '../../email/email.module';
+import { EmailService } from '../../email/email.service';
 import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
 import { JwtModule } from '../../jwt/jwt.module';
 import { JwtService } from '../../jwt/jwt.service';
-import { MailerModule } from '../../mailer/mailer.module';
-import { MailerService } from '../../mailer/mailer.service';
 import { IUser } from '../../users/interfaces/user.interface';
 import { UsersModule } from '../../users/users.module';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
-import { AuthResponseUserMapper } from '../mappers/auth-response-user.mapper';
 
 describe('AuthController', () => {
   let module: TestingModule,
     controller: AuthController,
-    mailerService: MailerService,
+    emailService: EmailService,
     jwtService: JwtService,
     orm: MikroORM,
     origin: string,
@@ -58,7 +63,7 @@ describe('AuthController', () => {
         CommonModule,
         UsersModule,
         JwtModule,
-        MailerModule,
+        EmailModule,
         ThrottlerModule.forRootAsync({
           imports: [ConfigModule],
           useClass: ThrottlerConfig,
@@ -73,9 +78,9 @@ describe('AuthController', () => {
     orm = module.get<MikroORM>(MikroORM);
     await orm.getSchemaGenerator().createSchema();
 
-    mailerService = module.get<MailerService>(MailerService);
-    jest.spyOn(mailerService, 'sendEmail').mockImplementation();
-    jest.spyOn(mailerService, 'sendResetPasswordEmail').mockImplementation();
+    emailService = module.get<EmailService>(EmailService);
+    jest.spyOn(emailService, 'sendEmail').mockImplementation();
+    jest.spyOn(emailService, 'sendResetPasswordEmail').mockImplementation();
 
     jwtService = module.get<JwtService>(JwtService);
 
@@ -86,7 +91,7 @@ describe('AuthController', () => {
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
-    expect(mailerService).toBeDefined();
+    expect(emailService).toBeDefined();
     expect(jwtService).toBeDefined();
     expect(orm).toBeDefined();
     expect(origin).toBeDefined();
@@ -293,7 +298,7 @@ describe('AuthController', () => {
       });
       expect(message).toBeInstanceOf(MessageMapper);
       expect(message.message).toBe('Reset password email sent');
-      expect(mailerService.sendResetPasswordEmail).not.toHaveBeenCalled();
+      expect(emailService.sendResetPasswordEmail).not.toHaveBeenCalled();
     });
 
     it('should send an email if user exists', async () => {
@@ -302,7 +307,7 @@ describe('AuthController', () => {
       });
       expect(message).toBeInstanceOf(MessageMapper);
       expect(message.message).toBe('Reset password email sent');
-      expect(mailerService.sendResetPasswordEmail).toHaveBeenCalled();
+      expect(emailService.sendResetPasswordEmail).toHaveBeenCalled();
     });
   });
 
@@ -438,13 +443,6 @@ describe('AuthController', () => {
       expect(res.cookie).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.send).toHaveBeenCalled();
-    });
-  });
-
-  describe('me', () => {
-    it('should get a user', async () => {
-      const user = await controller.getMe(mockUser.id);
-      expect(user).toBeInstanceOf(AuthResponseUserMapper);
     });
   });
 

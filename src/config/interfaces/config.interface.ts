@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { S3ClientConfig } from '@aws-sdk/client-s3';
@@ -14,18 +23,22 @@ import { IEmailConfig } from './email-config.interface';
 import { IJwt } from './jwt.interface';
 
 export interface IConfig {
-  port: number;
-  url: string;
-  db: MikroOrmModuleOptions;
-  jwt: IJwt;
-  emailService: IEmailConfig;
-  bucketConfig: S3ClientConfig;
-  bucketData: IBucketData;
-  redis?: RedisOptions;
-  ttl: number;
-  upload: UploadOptions;
-  testing: boolean;
-  sessionTime: number;
-  twoFactorTime: number;
-  throttler: ThrottlerModuleOptions;
+  readonly port: number;
+  readonly url: string;
+  readonly db: MikroOrmModuleOptions;
+  readonly jwt: IJwt;
+  readonly emailService: IEmailConfig;
+  readonly bucketConfig: S3ClientConfig;
+  readonly bucketData: IBucketData;
+  readonly redis?: RedisOptions;
+  readonly ttl: number;
+  readonly upload: UploadOptions;
+  readonly testing: boolean;
+  readonly sessionTime: number;
+  readonly twoFactorTime: number;
+  readonly throttler: ThrottlerModuleOptions;
+  readonly googleOAuthFlag: boolean;
+  readonly googleOAuth?: {};
+  readonly facebookOAuthFlag: boolean;
+  readonly facebookOAuth?: {};
 }

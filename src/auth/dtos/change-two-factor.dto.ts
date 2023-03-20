@@ -13,10 +13,14 @@
  Afonso Barracha
 */
 
-import { IUser } from '../../users/interfaces/user.interface';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsBoolean } from 'class-validator';
 
-export interface IAuthResult {
-  user: IUser;
-  accessToken: string;
-  refreshToken: string;
+export abstract class ChangeTwoFactorDto {
+  @ApiProperty({
+    description: 'The state of the two factor authentication',
+    type: Boolean,
+  })
+  @IsBoolean()
+  public readonly twoFactor: boolean;
 }

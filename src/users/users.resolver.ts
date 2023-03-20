@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import {
@@ -51,9 +60,9 @@ export class UsersResolver {
   public async updateUserPicture(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: PictureDto,
+    @Args() pictureDto: PictureDto,
   ): Promise<UserEntity> {
-    const user = await this.usersService.updatePicture(userId, dto);
+    const user = await this.usersService.updatePicture(userId, pictureDto);
     this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
     return user;
   }
@@ -62,11 +71,11 @@ export class UsersResolver {
   public async updateUserOnlineStatus(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: OnlineStatusDto,
+    @Args() onlineStatusDto: OnlineStatusDto,
   ): Promise<UserEntity> {
     const user = await this.usersService.updateOnlineStatus(
       userId,
-      dto.onlineStatus,
+      onlineStatusDto.onlineStatus,
     );
     this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
     return user;
@@ -76,9 +85,9 @@ export class UsersResolver {
   public async updateUserName(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: NameDto,
+    @Args() nameDto: NameDto,
   ): Promise<UserEntity> {
-    const user = await this.usersService.updateName(userId, dto.name);
+    const user = await this.usersService.updateName(userId, nameDto.name);
     this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
     return user;
   }
@@ -86,18 +95,18 @@ export class UsersResolver {
   @Mutation(() => UserEntity)
   public async updateUserEmail(
     @CurrentUser() userId: number,
-    @Args() dto: UpdateEmailDto,
+    @Args() updateEmailDto: UpdateEmailDto,
   ): Promise<UserEntity> {
-    return this.usersService.updateEmail(userId, dto);
+    return this.usersService.updateEmail(userId, updateEmailDto);
   }
 
   @Mutation(() => LocalMessageType)
   public async deleteUser(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: PasswordDto,
+    @Args() passwordDto: PasswordDto,
   ): Promise<LocalMessageType> {
-    const user = await this.usersService.delete(userId, dto.password);
+    const user = await this.usersService.delete(userId, passwordDto.password);
     this.publishUserChange(pubsub, user, ChangeTypeEnum.DELETE);
     return new LocalMessageType('User deleted successfully');
   }

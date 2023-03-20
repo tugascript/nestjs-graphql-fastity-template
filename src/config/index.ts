@@ -1,7 +1,16 @@
 /*
-  Free and Open Source - MIT
-  Copyright © 2023
-  Afonso Barracha
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
 */
 
 import { LoadStrategy } from '@mikro-orm/core';
@@ -85,5 +94,7 @@ export function config(): IConfig {
     },
     twoFactorTime: parseInt(process.env.TWO_FACTOR_TIME, 10),
     testing,
+    googleOAuthFlag: process.env.GOOGLE_OAUTH_FLAG === 'true',
+    facebookOAuthFlag: process.env.FACEBOOK_OAUTH_FLAG === 'true',
   };
 }
