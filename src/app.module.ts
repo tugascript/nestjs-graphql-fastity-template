@@ -33,6 +33,7 @@ import { JwtModule } from './jwt/jwt.module';
 import { LoadersModule } from './loaders/loaders.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
+import { Oauth2Module } from './oauth2/oauth2.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { UsersModule } from './users/users.module';
     UploaderModule,
     LoadersModule,
     JwtModule,
+    Oauth2Module,
   ],
   providers: [
     {
