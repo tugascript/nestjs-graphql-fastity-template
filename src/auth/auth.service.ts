@@ -51,6 +51,7 @@ import { SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
 import { ISessionsData } from './interfaces/session-data.interface';
+import { OAuthProvidersEnum } from '../oauth2/enums/oauth-providers.enum';
 
 @Injectable()
 export class AuthService {
@@ -85,7 +86,12 @@ export class AuthService {
   ): Promise<LocalMessageType> {
     const { name, email, password1, password2 } = dto;
     this.comparePasswords(password1, password2);
-    const user = await this.usersService.create(email, name, password1);
+    const user = await this.usersService.create(
+      email,
+      name,
+      OAuthProvidersEnum.LOCAL,
+      password1,
+    );
     const confirmationToken = await this.jwtService.generateToken(
       user,
       TokenTypeEnum.CONFIRMATION,
