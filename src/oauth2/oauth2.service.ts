@@ -13,7 +13,11 @@
  Afonso Barracha
 */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { IAuth } from './interfaces/auth.interface';
@@ -24,6 +28,10 @@ import { isNull } from '../config/utils/validation.util';
 import { IOAuth } from './interfaces/oauth.interface';
 import { IAuthorization } from './interfaces/authorization.interface';
 import { IToken } from './interfaces/token.interface';
+import { HttpService } from '@nestjs/axios';
+import { catchError, firstValueFrom } from 'rxjs';
+import { AxiosError } from 'axios';
+import { IOAuthUserResponse } from './interfaces/user-response.interface';
 
 @Injectable()
 export class Oauth2Service {
@@ -38,12 +46,6 @@ export class Oauth2Service {
     authorizePath: '/o/oauth2/v2/auth',
     tokenHost: 'https://www.googleapis.com',
     tokenPath: '/oauth2/v4/token',
-  };
-  private static readonly APPLE_AUTH: IAuth = {
-    authorizeHost: 'https://appleid.apple.com',
-    authorizePath: '/auth/authorize',
-    tokenHost: 'https://appleid.apple.com',
-    tokenPath: '/auth/token',
   };
   private static readonly FACEBOOK_AUTH: IAuth = {
     authorizeHost: 'https://facebook.com',
@@ -60,8 +62,6 @@ export class Oauth2Service {
   private readonly googleAuthorization: IAuthorization | null;
   private readonly microsoftClient: AuthorizationCode | null;
   private readonly microsoftAuthorization: IAuthorization | null;
-  private readonly appleClient: AuthorizationCode | null;
-  private readonly appleAuthorization: IAuthorization | null;
   private readonly facebookClient: AuthorizationCode | null;
   private readonly facebookAuthorization: IAuthorization | null;
   private readonly githubClient: AuthorizationCode | null;
@@ -70,6 +70,7 @@ export class Oauth2Service {
   constructor(
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
   ) {
     [this.googleClient, this.googleAuthorization] =
       Oauth2Service.generateAuthorizationCode(
@@ -79,11 +80,6 @@ export class Oauth2Service {
     [this.microsoftClient, this.microsoftAuthorization] =
       Oauth2Service.generateAuthorizationCode(
         OAuthProvidersEnum.MICROSOFT,
-        configService,
-      );
-    [this.appleClient, this.appleAuthorization] =
-      Oauth2Service.generateAuthorizationCode(
-        OAuthProvidersEnum.APPLE,
         configService,
       );
     [this.facebookClient, this.facebookAuthorization] =
@@ -108,8 +104,6 @@ export class Oauth2Service {
         return Oauth2Service.GOOGLE_AUTH;
       case OAuthProvidersEnum.MICROSOFT:
         return Oauth2Service.MICROSOFT_AUTH;
-      case OAuthProvidersEnum.APPLE:
-        return Oauth2Service.APPLE_AUTH;
       case OAuthProvidersEnum.FACEBOOK:
         return Oauth2Service.FACEBOOK_AUTH;
       case OAuthProvidersEnum.GITHUB:
@@ -139,6 +133,9 @@ export class Oauth2Service {
     ];
   }
 
+  /**
+   * Generates an authorization url for the given provider, so the user can be redirected to the provider's login page.
+   */
   public generateAuthorizationUrl(provider: OAuthProvidersEnum): string {
     const [code, authorization] = this.getOAuth(provider);
 
@@ -147,6 +144,51 @@ export class Oauth2Service {
     }
 
     return code.authorizeURL(authorization);
+  }
+
+  private async getUserData(
+    provider: OAuthProvidersEnum,
+    code: string,
+    state: string,
+  ): Promise<IOAuthUserResponse> {
+    if (provider === OAuthProvidersEnum.LOCAL) {
+      throw new UnauthorizedException('Invalid provider');
+    }
+
+    const accessToken = await this.getAccessToken(provider, code, state);
+    const userData = await firstValueFrom(
+      this.httpService
+        .get(this.getUserDataUrl(provider), {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+        .pipe(
+          catchError((error: AxiosError) => {
+            throw new UnauthorizedException(error.response.data);
+          }),
+        ),
+    );
+    return {
+      provider,
+      user: userData.data,
+    };
+  }
+
+  private getUserDataUrl(provider: OAuthProvidersEnum): string {
+    switch (provider) {
+      case OAuthProvidersEnum.GOOGLE:
+        return 'https://www.googleapis.com/oauth2/v3/userinfo';
+      case OAuthProvidersEnum.MICROSOFT:
+        return 'https://graph.microsoft.com/v1.0/me';
+      case OAuthProvidersEnum.FACEBOOK:
+        return 'https://graph.facebook.com/v16.0/me?fields=email,name,picture';
+      case OAuthProvidersEnum.GITHUB:
+        return 'https://api.github.com/user';
+      default:
+        throw new NotFoundException('Page not found');
+    }
   }
 
   private async getAccessToken(
@@ -181,8 +223,6 @@ export class Oauth2Service {
         return [this.googleClient, this.googleAuthorization];
       case OAuthProvidersEnum.MICROSOFT:
         return [this.microsoftClient, this.microsoftAuthorization];
-      case OAuthProvidersEnum.APPLE:
-        return [this.appleClient, this.appleAuthorization];
       case OAuthProvidersEnum.FACEBOOK:
         return [this.facebookClient, this.facebookAuthorization];
       case OAuthProvidersEnum.GITHUB:

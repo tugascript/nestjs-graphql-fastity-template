@@ -17,7 +17,6 @@ export enum OAuthProvidersEnum {
   LOCAL = 'LOCAL',
   MICROSOFT = 'MICROSOFT',
   GOOGLE = 'GOOGLE',
-  APPLE = 'APPLE',
   FACEBOOK = 'FACEBOOK',
   GITHUB = 'GITHUB',
 }
