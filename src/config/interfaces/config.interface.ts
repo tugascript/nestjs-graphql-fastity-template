@@ -39,6 +39,6 @@ export interface IConfig {
   readonly throttler: ThrottlerModuleOptions;
   readonly googleOAuthFlag: boolean;
   readonly googleOAuth?: {};
-  readonly facebookOAuthFlag: boolean;
+  readonly appleOAuthFlag: boolean;
   readonly facebookOAuth?: {};
 }

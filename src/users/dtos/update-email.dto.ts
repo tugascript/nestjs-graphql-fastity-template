@@ -23,5 +23,5 @@ export abstract class UpdateEmailDto extends PasswordDto {
   @IsString()
   @IsEmail()
   @Length(5, 255)
-  public email: string;
+  public readonly email: string;
 }

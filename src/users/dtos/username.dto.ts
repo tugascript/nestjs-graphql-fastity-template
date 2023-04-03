@@ -25,5 +25,5 @@ export abstract class UsernameDto {
   @Matches(SLUG_REGEX, {
     message: 'Username must be a valid slugs',
   })
-  public username: string;
+  public readonly username: string;
 }

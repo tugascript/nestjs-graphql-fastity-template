@@ -21,5 +21,5 @@ import { OnlineStatusEnum } from '../enums/online-status.enum';
 export abstract class OnlineStatusDto {
   @Field(() => OnlineStatusEnum)
   @IsEnum(OnlineStatusEnum)
-  public onlineStatus: OnlineStatusEnum;
+  public readonly onlineStatus: OnlineStatusEnum;
 }

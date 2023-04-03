@@ -41,6 +41,7 @@ import { UpdateEmailDto } from './dtos/update-email.dto';
 import { UserEntity } from './entities/user.entity';
 import { OnlineStatusEnum } from './enums/online-status.enum';
 import { IUser } from './interfaces/user.interface';
+import { OAuthProvidersEnum } from '../oauth2/enums/oauth-providers.enum';
 
 @Injectable()
 export class UsersService {
@@ -61,7 +62,8 @@ export class UsersService {
   public async create(
     email: string,
     name: string,
-    password: string,
+    provider: OAuthProvidersEnum,
+    password?: string,
   ): Promise<UserEntity> {
     const formattedEmail = email.toLowerCase();
     await this.checkEmailUniqueness(formattedEmail);
@@ -70,7 +72,8 @@ export class UsersService {
       email: formattedEmail,
       name: formattedName,
       username: await this.generateUsername(formattedName),
-      password: await hash(password, 10),
+      authProviders: [provider],
+      password: isUndefined(password) ? 'UNSET' : await hash(password, 10),
     });
     await this.commonService.saveEntity(this.usersRepository, user, true);
     return user;

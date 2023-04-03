@@ -25,5 +25,5 @@ export abstract class NameDto {
   @Matches(NAME_REGEX, {
     message: 'Name must not have special characters',
   })
-  public name: string;
+  public readonly name: string;
 }

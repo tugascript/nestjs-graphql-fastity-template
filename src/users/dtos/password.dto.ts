@@ -21,5 +21,5 @@ export abstract class PasswordDto {
   @Field(() => String)
   @IsString()
   @MinLength(1)
-  public password: string;
+  public readonly password: string;
 }

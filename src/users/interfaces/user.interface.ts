@@ -15,9 +15,11 @@
 
 import { OnlineStatusEnum } from '../enums/online-status.enum';
 import { ICredentials } from './credentials.interface';
+import { Collection } from '@mikro-orm/core';
 
 export interface IUser {
   id: number;
+  authProviders: Collection<any, any>;
   name: string;
   username: string;
   email: string;

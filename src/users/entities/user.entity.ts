@@ -13,7 +13,14 @@
  Afonso Barracha
 */
 
-import { Embedded, Entity, Enum, Property } from '@mikro-orm/core';
+import {
+  Collection,
+  Embedded,
+  Entity,
+  Enum,
+  OneToMany,
+  Property,
+} from '@mikro-orm/core';
 import { Field, ObjectType } from '@nestjs/graphql';
 import {
   IsBoolean,
@@ -27,14 +34,15 @@ import {
   Matches,
 } from 'class-validator';
 import {
-  BCRYPT_HASH,
   NAME_REGEX,
   SLUG_REGEX,
+  UNSET_BCRYPT_HASH,
 } from '../../common/constants/regex';
 import { LocalBaseEntity } from '../../common/entities/base.entity';
 import { CredentialsEmbeddable } from '../embeddables/credentials.embeddable';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
 import { IUser } from '../interfaces/user.interface';
+import { OAuthProviderEntity } from '../../oauth2/entities/oauth-provider.entity';
 
 @ObjectType('User')
 @Entity({ tableName: 'users' })
@@ -90,8 +98,8 @@ export class UserEntity extends LocalBaseEntity implements IUser {
 
   @Property({ columnType: 'varchar', length: 60 })
   @IsString()
-  @Length(59, 60)
-  @Matches(BCRYPT_HASH)
+  @Length(5, 60)
+  @Matches(UNSET_BCRYPT_HASH)
   public password: string;
 
   @Property({ columnType: 'boolean', default: false })
@@ -113,4 +121,7 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @Property()
   @IsDate()
   public lastOnline: Date = new Date();
+
+  @OneToMany(() => OAuthProviderEntity, (oauth) => oauth.user)
+  public authProviders = new Collection<OAuthProviderEntity, UserEntity>(this);
 }

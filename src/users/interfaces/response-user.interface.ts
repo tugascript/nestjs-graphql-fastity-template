@@ -14,9 +14,9 @@
 */
 
 export interface IResponseUser {
-  id: number;
-  name: string;
-  username: string;
-  createdAt: string;
-  updatedAt: string;
+  readonly id: number;
+  readonly name: string;
+  readonly username: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 }

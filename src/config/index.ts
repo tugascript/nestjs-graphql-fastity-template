@@ -95,6 +95,6 @@ export function config(): IConfig {
     twoFactorTime: parseInt(process.env.TWO_FACTOR_TIME, 10),
     testing,
     googleOAuthFlag: process.env.GOOGLE_OAUTH_FLAG === 'true',
-    facebookOAuthFlag: process.env.FACEBOOK_OAUTH_FLAG === 'true',
+    appleOAuthFlag: process.env.APPLE_OAUTH_FLAG === 'true',
   };
 }

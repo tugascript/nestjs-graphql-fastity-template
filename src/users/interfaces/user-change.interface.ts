@@ -17,5 +17,5 @@ import { IChange } from '../../common/interfaces/change.interface';
 import { IUser } from './user.interface';
 
 export interface IUserChange {
-  userChange: IChange<IUser>;
+  readonly userChange: IChange<IUser>;
 }

@@ -35,16 +35,16 @@ async function bootstrap() {
   );
   const configService = app.get(ConfigService);
   const testing = configService.get<boolean>('testing');
-  app.register(fastifyCors as any, {
+  app.register(fastifyCors, {
     credentials: true,
     origin: configService.get<string>('url'),
   });
-  app.register(fastifyCookie as any, {
+  app.register(fastifyCookie, {
     secret: configService.get<string>('COOKIE_SECRET'),
   });
-  app.register(fastifyCsrf as any, { cookieOpts: { signed: true } });
-  app.register(mercuriusUpload as any, configService.get('upload'));
-  app.register(fastifyStatic as any, {
+  app.register(fastifyCsrf, { cookieOpts: { signed: true } });
+  app.register(mercuriusUpload, configService.get('upload'));
+  app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),
     decorateReply: !testing,
   });
