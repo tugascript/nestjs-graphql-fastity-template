@@ -22,7 +22,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FastifyRequest } from 'fastify';
-import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
+import { OAuthProvidersEnum } from '../../users/enums/oauth-providers.enum';
 import { IClient } from '../interfaces/client.interface';
 import { isNull } from '../../config/utils/validation.util';
 

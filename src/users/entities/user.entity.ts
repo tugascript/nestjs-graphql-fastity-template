@@ -42,7 +42,7 @@ import { LocalBaseEntity } from '../../common/entities/base.entity';
 import { CredentialsEmbeddable } from '../embeddables/credentials.embeddable';
 import { OnlineStatusEnum } from '../enums/online-status.enum';
 import { IUser } from '../interfaces/user.interface';
-import { OAuthProviderEntity } from '../../oauth2/entities/oauth-provider.entity';
+import { OAuthProviderEntity } from './oauth-provider.entity';
 
 @ObjectType('User')
 @Entity({ tableName: 'users' })

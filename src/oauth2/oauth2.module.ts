@@ -18,10 +18,12 @@ import { Oauth2Service } from './oauth2.service';
 import { Oauth2Controller } from './oauth2.controller';
 import { UsersModule } from '../users/users.module';
 import { HttpModule } from '@nestjs/axios';
+import { JwtModule } from '../jwt/jwt.module';
 
 @Module({
   imports: [
     UsersModule,
+    JwtModule,
     HttpModule.register({
       timeout: 5000,
       maxRedirects: 5,

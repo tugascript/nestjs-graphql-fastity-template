@@ -51,7 +51,7 @@ import { SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
 import { ISessionsData } from './interfaces/session-data.interface';
-import { OAuthProvidersEnum } from '../oauth2/enums/oauth-providers.enum';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 
 @Injectable()
 export class AuthService {
@@ -87,9 +87,9 @@ export class AuthService {
     const { name, email, password1, password2 } = dto;
     this.comparePasswords(password1, password2);
     const user = await this.usersService.create(
+      OAuthProvidersEnum.LOCAL,
       email,
       name,
-      OAuthProvidersEnum.LOCAL,
       password1,
     );
     const confirmationToken = await this.jwtService.generateToken(
@@ -238,10 +238,8 @@ export class AuthService {
       password,
       password1,
     );
-    const [accessToken, refreshToken] = await this.generateAuthTokens(
-      user,
-      domain,
-    );
+    const [accessToken, refreshToken] =
+      await this.jwtService.generateAuthTokens(user, domain);
     return { user, accessToken, refreshToken };
   }
 
@@ -323,11 +321,8 @@ export class AuthService {
     domain?: string,
     tokenId?: string,
   ): Promise<IAuthResult> {
-    const [accessToken, refreshToken] = await this.generateAuthTokens(
-      user,
-      domain,
-      tokenId,
-    );
+    const [accessToken, refreshToken] =
+      await this.jwtService.generateAuthTokens(user, domain, tokenId);
     return { user, accessToken, refreshToken };
   }
 
@@ -457,27 +452,6 @@ export class AuthService {
     }
 
     return this.usersService.findOneByUsername(emailOrUsername, true);
-  }
-
-  private async generateAuthTokens(
-    user: UserEntity,
-    domain?: string,
-    tokenId?: string,
-  ): Promise<[string, string]> {
-    return Promise.all([
-      this.jwtService.generateToken(
-        user,
-        TokenTypeEnum.ACCESS,
-        domain,
-        tokenId,
-      ),
-      this.jwtService.generateToken(
-        user,
-        TokenTypeEnum.REFRESH,
-        domain,
-        tokenId,
-      ),
-    ]);
   }
 
   private async saveTwoFactorCode(user: UserEntity): Promise<LocalMessageType> {

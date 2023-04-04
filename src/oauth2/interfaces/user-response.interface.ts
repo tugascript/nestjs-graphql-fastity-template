@@ -13,14 +13,7 @@
  Afonso Barracha
 */
 
-import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
-
-interface IUserReponse<P extends OAuthProvidersEnum, T> {
-  readonly provider: P;
-  readonly user: T;
-}
-
-interface IMicrosoftUser {
+export interface IMicrosoftUser {
   readonly businessPhones: string[];
   readonly displayName: string;
   readonly givenName: string;
@@ -34,7 +27,7 @@ interface IMicrosoftUser {
   readonly id: string;
 }
 
-interface IGoogleUser {
+export interface IGoogleUser {
   readonly sub: string;
   readonly name: string;
   readonly given_name: string;
@@ -57,7 +50,7 @@ interface IFacebookPicture {
   readonly data: IFacebookPictureData;
 }
 
-interface IFacebookUser {
+export interface IFacebookUser {
   readonly id: string;
   readonly name: string;
   readonly email: string;
@@ -71,7 +64,7 @@ interface IGitHubPlan {
   readonly collaborators: number;
 }
 
-interface IGitHubUser {
+export interface IGitHubUser {
   readonly login: string;
   readonly id: number;
   readonly node_id: string;
@@ -112,9 +105,3 @@ interface IGitHubUser {
   readonly two_factor_authentication: boolean;
   readonly plan: IGitHubPlan;
 }
-
-export type IOAuthUserResponse =
-  | IUserReponse<OAuthProvidersEnum.MICROSOFT, IMicrosoftUser>
-  | IUserReponse<OAuthProvidersEnum.GOOGLE, IGoogleUser>
-  | IUserReponse<OAuthProvidersEnum.FACEBOOK, IFacebookUser>
-  | IUserReponse<OAuthProvidersEnum.GITHUB, IGitHubUser>;

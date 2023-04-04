@@ -23,7 +23,7 @@ import { UsersService } from '../users/users.service';
 import { IAuth } from './interfaces/auth.interface';
 import { AuthorizationCode } from 'simple-oauth2';
 import { randomBytes } from 'crypto';
-import { OAuthProvidersEnum } from './enums/oauth-providers.enum';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 import { isNull } from '../config/utils/validation.util';
 import { IOAuth } from './interfaces/oauth.interface';
 import { IAuthorization } from './interfaces/authorization.interface';
@@ -31,7 +31,8 @@ import { IToken } from './interfaces/token.interface';
 import { HttpService } from '@nestjs/axios';
 import { catchError, firstValueFrom } from 'rxjs';
 import { AxiosError } from 'axios';
-import { IOAuthUserResponse } from './interfaces/user-response.interface';
+import { ICallbackQuery } from './interfaces/callback-query.interface';
+import { JwtService } from '../jwt/jwt.service';
 
 @Injectable()
 export class Oauth2Service {
@@ -69,6 +70,7 @@ export class Oauth2Service {
 
   constructor(
     private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
@@ -146,19 +148,15 @@ export class Oauth2Service {
     return code.authorizeURL(authorization);
   }
 
-  private async getUserData(
+  public async getUserData<T>(
     provider: OAuthProvidersEnum,
-    code: string,
-    state: string,
-  ): Promise<IOAuthUserResponse> {
-    if (provider === OAuthProvidersEnum.LOCAL) {
-      throw new UnauthorizedException('Invalid provider');
-    }
-
+    cbQuery: ICallbackQuery,
+  ): Promise<T> {
+    const { code, state } = cbQuery;
     const accessToken = await this.getAccessToken(provider, code, state);
     const userData = await firstValueFrom(
       this.httpService
-        .get(this.getUserDataUrl(provider), {
+        .get<T>(this.getUserDataUrl(provider), {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
@@ -170,10 +168,16 @@ export class Oauth2Service {
           }),
         ),
     );
-    return {
-      provider,
-      user: userData.data,
-    };
+    return userData.data;
+  }
+
+  public async login(
+    provider: OAuthProvidersEnum,
+    email: string,
+    name: string,
+  ): Promise<[string, string]> {
+    const user = await this.usersService.findOrCreate(provider, email, name);
+    return this.jwtService.generateAuthTokens(user);
   }
 
   private getUserDataUrl(provider: OAuthProvidersEnum): string {

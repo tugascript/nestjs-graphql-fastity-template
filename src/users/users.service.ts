@@ -41,7 +41,8 @@ import { UpdateEmailDto } from './dtos/update-email.dto';
 import { UserEntity } from './entities/user.entity';
 import { OnlineStatusEnum } from './enums/online-status.enum';
 import { IUser } from './interfaces/user.interface';
-import { OAuthProvidersEnum } from '../oauth2/enums/oauth-providers.enum';
+import { OAuthProvidersEnum } from './enums/oauth-providers.enum';
+import { OAuthProviderEntity } from './entities/oauth-provider.entity';
 
 @Injectable()
 export class UsersService {
@@ -51,6 +52,8 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: EntityRepository<UserEntity>,
+    @InjectRepository(OAuthProviderEntity)
+    private readonly oauthProvidersRepository: EntityRepository<OAuthProviderEntity>,
     private readonly uploaderService: UploaderService,
     private readonly commonService: CommonService,
     @Inject(CACHE_MANAGER)
@@ -60,9 +63,9 @@ export class UsersService {
   }
 
   public async create(
+    provider: OAuthProvidersEnum,
     email: string,
     name: string,
-    provider: OAuthProvidersEnum,
     password?: string,
   ): Promise<UserEntity> {
     const formattedEmail = email.toLowerCase();
@@ -72,10 +75,40 @@ export class UsersService {
       email: formattedEmail,
       name: formattedName,
       username: await this.generateUsername(formattedName),
-      authProviders: [provider],
       password: isUndefined(password) ? 'UNSET' : await hash(password, 10),
+      confirmed: provider !== OAuthProvidersEnum.LOCAL,
     });
     await this.commonService.saveEntity(this.usersRepository, user, true);
+    await this.createOAuthProvider(provider, user);
+    return user;
+  }
+
+  public async findOrCreate(
+    provider: OAuthProvidersEnum,
+    email: string,
+    name: string,
+  ): Promise<UserEntity> {
+    const formattedEmail = email.toLowerCase();
+    const user = await this.usersRepository.findOne(
+      {
+        email: formattedEmail,
+      },
+      {
+        populate: ['authProviders'],
+      },
+    );
+
+    if (isUndefined(user) || isNull(user)) {
+      return this.create(provider, email, name);
+    }
+    if (
+      !user.authProviders.contains(
+        this.oauthProvidersRepository.getReference([provider, user.id]),
+      )
+    ) {
+      await this.createOAuthProvider(provider, user);
+    }
+
     return user;
   }
 
@@ -316,6 +349,22 @@ export class UsersService {
       qb,
       after,
     );
+  }
+
+  private async createOAuthProvider(
+    provider: OAuthProvidersEnum,
+    user: UserEntity,
+  ): Promise<OAuthProviderEntity> {
+    const oauthProvider = this.oauthProvidersRepository.create({
+      provider,
+      user,
+    });
+    await this.commonService.saveEntity(
+      this.oauthProvidersRepository,
+      oauthProvider,
+      true,
+    );
+    return oauthProvider;
   }
 
   private async checkUsernameUniqueness(username: string): Promise<void> {

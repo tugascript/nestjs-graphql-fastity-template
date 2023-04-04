@@ -23,8 +23,8 @@ import {
 } from '@mikro-orm/core';
 import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
 import { IsEnum } from 'class-validator';
-import { UserEntity } from '../../users/entities/user.entity';
-import { IOAuthProvider } from '../interfaces/oauth-provider.interface';
+import { UserEntity } from './user.entity';
+import { IOAuthProvider } from '../../oauth2/interfaces/oauth-provider.interface';
 
 @Entity({ tableName: 'oauth_providers' })
 @Unique({ properties: ['provider', 'user'] })
