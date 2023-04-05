@@ -13,26 +13,26 @@
  Afonso Barracha
 */
 
+import { HttpService } from '@nestjs/axios';
 import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AxiosError } from 'axios';
+import { randomBytes } from 'crypto';
+import { catchError, firstValueFrom } from 'rxjs';
+import { AuthorizationCode } from 'simple-oauth2';
+import { isNull } from '../config/utils/validation.util';
+import { JwtService } from '../jwt/jwt.service';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 import { UsersService } from '../users/users.service';
 import { IAuth } from './interfaces/auth.interface';
-import { AuthorizationCode } from 'simple-oauth2';
-import { randomBytes } from 'crypto';
-import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
-import { isNull } from '../config/utils/validation.util';
-import { IOAuth } from './interfaces/oauth.interface';
 import { IAuthorization } from './interfaces/authorization.interface';
-import { IToken } from './interfaces/token.interface';
-import { HttpService } from '@nestjs/axios';
-import { catchError, firstValueFrom } from 'rxjs';
-import { AxiosError } from 'axios';
 import { ICallbackQuery } from './interfaces/callback-query.interface';
-import { JwtService } from '../jwt/jwt.service';
+import { IOAuth } from './interfaces/oauth.interface';
+import { IToken } from './interfaces/token.interface';
 
 @Injectable()
 export class Oauth2Service {
@@ -119,7 +119,9 @@ export class Oauth2Service {
     provider: OAuthProvidersEnum,
     configService: ConfigService,
   ): [AuthorizationCode | null, IAuthorization | null] {
-    const oauth = configService.get<IOAuth | null>(`oauth2.${provider}`);
+    const oauth = configService.get<IOAuth | null>(
+      `oauth2.${provider.toLowerCase()}`,
+    );
     const auth = Oauth2Service.getAuth(provider);
 
     if (isNull(oauth) || isNull(auth)) {

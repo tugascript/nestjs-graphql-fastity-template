@@ -12,8 +12,8 @@ type User {
   picture: String
   onlineStatus: OnlineStatus!
   defaultStatus: OnlineStatus
-  twoFactor: Boolean
   lastOnline: String!
+  twoFactor: Boolean
 }
 
 enum OnlineStatus {
@@ -54,43 +54,34 @@ type UserEntityNotificationEdge {
   node: User!
 }
 
-type UserNotification {
-  type: NotificationType!
+type UserChange {
+  type: ChangeType!
   edge: UserEntityNotificationEdge!
 }
 
-enum NotificationType {
+enum ChangeType {
   NEW
   UPDATE
   DELETE
 }
 
 type Query {
-  me: User!
+  userById(id: Int!): User!
   userByUsername(username: String!): User!
-  userById(userId: Int!): User!
-  users(cursor: QueryCursor! = DATE, order: QueryOrder! = DESC, after: String, first: Int! = 10, search: String): PaginatedUsers!
-}
-
-enum QueryCursor {
-  DATE
-  ALPHA
-}
-
-enum QueryOrder {
-  ASC
-  DESC
+  queryUsers(after: String, first: Int! = 10, search: String): PaginatedUsers!
 }
 
 type Mutation {
-  updateProfilePicture(picture: Upload!): User!
-  updateOnlineStatus(defaultStatus: OnlineStatus!): User!
-  deleteAccount(password: String!): Message!
+  updateUserPicture(picture: Upload!): User!
+  updateUserOnlineStatus(onlineStatus: OnlineStatus!): User!
+  updateUserName(name: String!): User!
+  updateUserEmail(password: String!, email: String!): User!
+  deleteUser(password: String!): Message!
 }
 
 """The `Upload` scalar type represents a file upload."""
 scalar Upload
 
 type Subscription {
-  userNotification(userId: Int): UserNotification!
+  userChange(id: Int!): UserChange!
 }

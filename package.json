@@ -22,22 +22,24 @@
     "migrate:update": "npx mikro-orm schema:update --run"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.305.0",
-    "@aws-sdk/signature-v4-crt": "^3.303.0",
+    "@aws-sdk/client-s3": "^3.306.0",
+    "@aws-sdk/signature-v4-crt": "^3.306.0",
     "@fastify/cookie": "^8.3.0",
     "@fastify/cors": "^8.2.1",
     "@fastify/csrf-protection": "^6.2.0",
     "@fastify/static": "^6.10.0",
-    "@mikro-orm/core": "^5.6.15",
+    "@mercuriusjs/gateway": "^1.2.0",
+    "@mikro-orm/core": "^5.6.16",
     "@mikro-orm/nestjs": "^5.1.8",
-    "@mikro-orm/postgresql": "^5.6.15",
+    "@mikro-orm/postgresql": "^5.6.16",
     "@nestjs/axios": "^2.0.0",
-    "@nestjs/common": "^9.3.12",
+    "@nestjs/cache-manager": "^1.0.0",
+    "@nestjs/common": "^9.4.0",
     "@nestjs/config": "^2.3.1",
-    "@nestjs/core": "^9.3.12",
+    "@nestjs/core": "^9.4.0",
     "@nestjs/graphql": "^11.0.4",
     "@nestjs/mercurius": "^11.0.3",
-    "@nestjs/platform-fastify": "^9.3.12",
+    "@nestjs/platform-fastify": "^9.4.0",
     "@nestjs/swagger": "^6.3.0",
     "@nestjs/throttler": "^4.0.0",
     "altair-fastify-plugin": "^5.0.21",
@@ -70,11 +72,11 @@
   },
   "devDependencies": {
     "@faker-js/faker": "^7.6.0",
-    "@mikro-orm/cli": "^5.6.15",
-    "@mikro-orm/sqlite": "^5.6.15",
+    "@mikro-orm/cli": "^5.6.16",
+    "@mikro-orm/sqlite": "^5.6.16",
     "@nestjs/cli": "^9.3.0",
     "@nestjs/schematics": "^9.1.0",
-    "@nestjs/testing": "^9.3.12",
+    "@nestjs/testing": "^9.4.0",
     "@types/bcrypt": "^5.0.0",
     "@types/cache-manager": "^4.0.2",
     "@types/graphql-upload": "^15.0.2",
@@ -128,5 +130,8 @@
       "./dist/mikro-orm.config.js"
     ]
   },
-  "packageManager": "yarn@3.4.1"
+  "packageManager": "yarn@3.4.1",
+  "resolutions": {
+    "mercurius/@fastify/websocket": "7.2.0"
+  }
 }

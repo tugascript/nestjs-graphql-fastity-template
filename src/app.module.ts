@@ -14,7 +14,8 @@
 */
 
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { CacheModule, Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -31,9 +32,9 @@ import { validationSchema } from './config/validation.config';
 import { EmailModule } from './email/email.module';
 import { JwtModule } from './jwt/jwt.module';
 import { LoadersModule } from './loaders/loaders.module';
+import { Oauth2Module } from './oauth2/oauth2.module';
 import { UploaderModule } from './uploader/uploader.module';
 import { UsersModule } from './users/users.module';
-import { Oauth2Module } from './oauth2/oauth2.module';
 
 @Module({
   imports: [

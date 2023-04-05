@@ -52,9 +52,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('NestJS Authentication API')
-    .setDescription('An OAuth2.0 authentication API made with NestJS')
-    .setVersion('0.0.1')
+    .setTitle('NestJS API')
+    .setDescription('An API made with NestJS')
+    .setVersion('1.0.0')
     .addBearerAuth()
     .addTag('Authentication API')
     .build();

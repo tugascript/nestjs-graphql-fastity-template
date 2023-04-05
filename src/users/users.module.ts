@@ -16,12 +16,16 @@
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { Module } from '@nestjs/common';
 import { UploaderModule } from '../uploader/uploader.module';
+import { OAuthProviderEntity } from './entities/oauth-provider.entity';
 import { UserEntity } from './entities/user.entity';
 import { UsersResolver } from './users.resolver';
 import { UsersService } from './users.service';
 
 @Module({
-  imports: [MikroOrmModule.forFeature([UserEntity]), UploaderModule],
+  imports: [
+    MikroOrmModule.forFeature([UserEntity, OAuthProviderEntity]),
+    UploaderModule,
+  ],
   providers: [UsersService, UsersResolver],
   exports: [UsersService],
 })

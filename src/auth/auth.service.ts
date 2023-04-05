@@ -13,9 +13,9 @@
  Afonso Barracha
 */
 
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
-  CACHE_MANAGER,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -40,6 +40,7 @@ import { IEmailToken } from '../jwt/interfaces/email-token.interface';
 import { IRefreshToken } from '../jwt/interfaces/refresh-token.interface';
 import { JwtService } from '../jwt/jwt.service';
 import { UserEntity } from '../users/entities/user.entity';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 import { OnlineStatusEnum } from '../users/enums/online-status.enum';
 import { ICredentials } from '../users/interfaces/credentials.interface';
 import { UsersService } from '../users/users.service';
@@ -51,7 +52,6 @@ import { SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto } from './dtos/sign-up.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
 import { ISessionsData } from './interfaces/session-data.interface';
-import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 
 @Injectable()
 export class AuthService {
