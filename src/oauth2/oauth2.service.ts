@@ -137,6 +137,21 @@ export class Oauth2Service {
     ];
   }
 
+  private static getUserDataUrl(provider: OAuthProvidersEnum): string {
+    switch (provider) {
+      case OAuthProvidersEnum.GOOGLE:
+        return 'https://www.googleapis.com/oauth2/v3/userinfo';
+      case OAuthProvidersEnum.MICROSOFT:
+        return 'https://graph.microsoft.com/v1.0/me';
+      case OAuthProvidersEnum.FACEBOOK:
+        return 'https://graph.facebook.com/v16.0/me?fields=email,name,picture';
+      case OAuthProvidersEnum.GITHUB:
+        return 'https://api.github.com/user';
+      default:
+        throw new NotFoundException('Page not found');
+    }
+  }
+
   /**
    * Generates an authorization url for the given provider, so the user can be redirected to the provider's login page.
    */
@@ -158,7 +173,7 @@ export class Oauth2Service {
     const accessToken = await this.getAccessToken(provider, code, state);
     const userData = await firstValueFrom(
       this.httpService
-        .get<T>(this.getUserDataUrl(provider), {
+        .get<T>(Oauth2Service.getUserDataUrl(provider), {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
@@ -182,21 +197,6 @@ export class Oauth2Service {
     return this.jwtService.generateAuthTokens(user);
   }
 
-  private getUserDataUrl(provider: OAuthProvidersEnum): string {
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return 'https://www.googleapis.com/oauth2/v3/userinfo';
-      case OAuthProvidersEnum.MICROSOFT:
-        return 'https://graph.microsoft.com/v1.0/me';
-      case OAuthProvidersEnum.FACEBOOK:
-        return 'https://graph.facebook.com/v16.0/me?fields=email,name,picture';
-      case OAuthProvidersEnum.GITHUB:
-        return 'https://api.github.com/user';
-      default:
-        throw new NotFoundException('Page not found');
-    }
-  }
-
   private async getAccessToken(
     provider: OAuthProvidersEnum,
     code: string,
@@ -218,6 +218,7 @@ export class Oauth2Service {
       scope: authorization.scope,
     });
 
+    // TODO: Fix this (add custom interface)
     return (result.token as unknown as IToken).access_token;
   }
 

@@ -13,7 +13,14 @@
  Afonso Barracha
 */
 
-import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Query,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiNotFoundResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FastifyReply } from 'fastify';
@@ -55,15 +62,13 @@ export class Oauth2Controller {
   @Get('microsoft')
   @ApiResponse({
     description: 'Redirects to Microsoft OAuth2 login page',
-    status: 302,
+    status: HttpStatus.TEMPORARY_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Microsoft',
   })
   public microsoft(@Res() res: FastifyReply): FastifyReply {
-    return res.redirect(
-      this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.MICROSOFT),
-    );
+    return this.startRedirect(res, OAuthProvidersEnum.MICROSOFT);
   }
 
   @Public()
@@ -71,7 +76,7 @@ export class Oauth2Controller {
   @Get('microsoft/callback')
   @ApiResponse({
     description: 'Redirects to the frontend with the JWT token',
-    status: 301,
+    status: HttpStatus.PERMANENT_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Microsoft',
@@ -91,15 +96,13 @@ export class Oauth2Controller {
   @Get('google')
   @ApiResponse({
     description: 'Redirects to Google OAuth2 login page',
-    status: 302,
+    status: HttpStatus.TEMPORARY_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Google',
   })
   public google(@Res() res: FastifyReply): FastifyReply {
-    return res.redirect(
-      this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.GOOGLE),
-    );
+    return this.startRedirect(res, OAuthProvidersEnum.GOOGLE);
   }
 
   @Public()
@@ -107,7 +110,7 @@ export class Oauth2Controller {
   @Get('google/callback')
   @ApiResponse({
     description: 'Redirects to the frontend with the JWT token',
-    status: 301,
+    status: HttpStatus.PERMANENT_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Google',
@@ -129,15 +132,13 @@ export class Oauth2Controller {
   @Get('facebook')
   @ApiResponse({
     description: 'Redirects to Facebook OAuth2 login page',
-    status: 302,
+    status: HttpStatus.TEMPORARY_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Facebook',
   })
   public facebook(@Res() res: FastifyReply): FastifyReply {
-    return res.redirect(
-      this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.FACEBOOK),
-    );
+    return this.startRedirect(res, OAuthProvidersEnum.FACEBOOK);
   }
 
   @Public()
@@ -145,7 +146,7 @@ export class Oauth2Controller {
   @Get('facebook/callback')
   @ApiResponse({
     description: 'Redirects to the frontend with the JWT token',
-    status: 301,
+    status: HttpStatus.PERMANENT_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for Facebook',
@@ -167,15 +168,13 @@ export class Oauth2Controller {
   @Get('github')
   @ApiResponse({
     description: 'Redirects to GitHub OAuth2 login page',
-    status: 302,
+    status: HttpStatus.TEMPORARY_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for GitHub',
   })
   public github(@Res() res: FastifyReply): FastifyReply {
-    return res.redirect(
-      this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.GITHUB),
-    );
+    return this.startRedirect(res, OAuthProvidersEnum.GITHUB);
   }
 
   @Public()
@@ -183,7 +182,7 @@ export class Oauth2Controller {
   @Get('github/callback')
   @ApiResponse({
     description: 'Redirects to the frontend with the JWT token',
-    status: 301,
+    status: HttpStatus.PERMANENT_REDIRECT,
   })
   @ApiNotFoundResponse({
     description: 'OAuth2 is not enabled for GitHub',
@@ -198,6 +197,15 @@ export class Oauth2Controller {
       cbQuery,
     );
     return this.loginAndRedirect(res, provider, email, name);
+  }
+
+  private startRedirect(
+    res: FastifyReply,
+    provider: OAuthProvidersEnum,
+  ): FastifyReply {
+    return res
+      .status(HttpStatus.TEMPORARY_REDIRECT)
+      .redirect(this.oauth2Service.generateAuthorizationUrl(provider));
   }
 
   private async loginAndRedirect(
@@ -219,6 +227,7 @@ export class Oauth2Controller {
         path: this.cookiePath,
         expires: new Date(Date.now() + this.refreshTime * 1000),
       })
+      .status(HttpStatus.PERMANENT_REDIRECT)
       .redirect(`${this.url}/?access_token=${accessToken}`);
   }
 }
