@@ -16,16 +16,17 @@
 import { faker } from '@faker-js/faker';
 import { MikroORM } from '@mikro-orm/core';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { CacheModule } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { compare } from 'bcrypt';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
-import { validationSchema } from '../../config/index.schema';
+import { config } from '../../config';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
-import { config } from '../../index';
+import { validationSchema } from '../../config/validation.config';
 import { UserEntity } from '../entities/user.entity';
+import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
 import { UsersService } from '../users.service';
 
 describe('UsersService', () => {
@@ -76,7 +77,12 @@ describe('UsersService', () => {
 
   describe('create', () => {
     it('should create a user', async () => {
-      const user = await service.create(email, name, password);
+      const user = await service.create(
+        OAuthProvidersEnum.LOCAL,
+        email,
+        name,
+        password,
+      );
       expect(user).toBeInstanceOf(UserEntity);
       expect(user.username).toEqual(commonService.generatePointSlug(name));
     });
@@ -84,6 +90,7 @@ describe('UsersService', () => {
     it('should throw a conflict exception', async () => {
       await expect(
         service.create(
+          OAuthProvidersEnum.LOCAL,
           email,
           faker.name.firstName(),
           faker.internet.password(8),
@@ -93,6 +100,7 @@ describe('UsersService', () => {
 
     it('should create a user with a different username', async () => {
       const user = await service.create(
+        OAuthProvidersEnum.LOCAL,
         email2,
         name,
         faker.internet.password(8),
@@ -172,22 +180,6 @@ describe('UsersService', () => {
   });
 
   describe('update', () => {
-    describe('username', () => {
-      it('should update a user username', async () => {
-        const user = await service.update(1, {
-          username: 'new-username',
-        });
-        expect(user).toBeInstanceOf(UserEntity);
-        expect(user.username).toEqual('new-username');
-      });
-
-      it('should throw a conflict exception', async () => {
-        await expect(
-          service.update(2, { username: 'new-username' }),
-        ).rejects.toThrowError('Username already in use');
-      });
-    });
-
     describe('email', () => {
       it('should throw a bad request exception if password is wrong', async () => {
         await expect(
@@ -257,14 +249,14 @@ describe('UsersService', () => {
   });
 
   describe('delete', () => {
-    it('should thow an error if password is wrong', async () => {
-      await expect(
-        service.delete(1, { password: password + '1' }),
-      ).rejects.toThrowError('Wrong password');
+    it('should throw an error if password is wrong', async () => {
+      await expect(service.delete(1, password + '1')).rejects.toThrowError(
+        'Wrong password',
+      );
     });
 
     it('should delete a user', async () => {
-      await service.delete(1, { password });
+      await service.delete(1, password);
       await expect(service.findOneById(1)).rejects.toThrowError(
         'User not found',
       );
