@@ -13,6 +13,11 @@
  Afonso Barracha
 */
 
-export interface IWsParams {
-  readonly authorization?: string;
+import { IOAuth } from '../../oauth2/interfaces/oauth.interface';
+
+export interface IOAuth2 {
+  readonly microsoft: IOAuth | null;
+  readonly google: IOAuth | null;
+  readonly facebook: IOAuth | null;
+  readonly github: IOAuth | null;
 }

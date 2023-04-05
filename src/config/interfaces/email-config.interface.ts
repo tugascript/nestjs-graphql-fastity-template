@@ -14,13 +14,13 @@
 */
 
 interface IEmailAuth {
-  user: string;
-  pass: string;
+  readonly user: string;
+  readonly pass: string;
 }
 
 export interface IEmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: IEmailAuth;
+  readonly host: string;
+  readonly port: number;
+  readonly secure: boolean;
+  readonly auth: IEmailAuth;
 }

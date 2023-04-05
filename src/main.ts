@@ -24,6 +24,7 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from '@nestjs/platform-fastify';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
 import { AppModule } from './app.module';
@@ -37,7 +38,7 @@ async function bootstrap() {
   const testing = configService.get<boolean>('testing');
   app.register(fastifyCors, {
     credentials: true,
-    origin: configService.get<string>('url'),
+    origin: `https://${configService.get<string>('DOMAIN')}`,
   });
   app.register(fastifyCookie, {
     secret: configService.get<string>('COOKIE_SECRET'),
@@ -48,7 +49,18 @@ async function bootstrap() {
     root: join(__dirname, '..', 'public'),
     decorateReply: !testing,
   });
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(new ValidationPipe({ transform: true }));
+
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('NestJS Authentication API')
+    .setDescription('An OAuth2.0 authentication API made with NestJS')
+    .setVersion('0.0.1')
+    .addBearerAuth()
+    .addTag('Authentication API')
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup('api/docs', app, document);
+
   await app.listen(
     configService.get<number>('port'),
     testing ? '127.0.0.1' : '0.0.0.0', // because of nginx

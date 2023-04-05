@@ -21,6 +21,7 @@ import { RedisOptions } from 'ioredis';
 import { IBucketData } from './bucket-data.inteface';
 import { IEmailConfig } from './email-config.interface';
 import { IJwt } from './jwt.interface';
+import { IOAuth2 } from './oauth2.interface';
 
 export interface IConfig {
   readonly port: number;
@@ -37,8 +38,5 @@ export interface IConfig {
   readonly sessionTime: number;
   readonly twoFactorTime: number;
   readonly throttler: ThrottlerModuleOptions;
-  readonly googleOAuthFlag: boolean;
-  readonly googleOAuth?: {};
-  readonly appleOAuthFlag: boolean;
-  readonly facebookOAuth?: {};
+  readonly oauth2: IOAuth2;
 }

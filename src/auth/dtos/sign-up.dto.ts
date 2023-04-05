@@ -15,7 +15,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { IsEmail, IsString, Length, Matches } from 'class-validator';
-import { NAME_REGEX } from '../../common/consts/regex.const';
+import { NAME_REGEX } from '../../common/constants/regex';
 import { PasswordsDto } from './passwords.dto';
 
 export abstract class SignUpDto extends PasswordsDto {

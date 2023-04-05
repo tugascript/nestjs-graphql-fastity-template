@@ -18,6 +18,7 @@ import { defineConfig as definePGConfig } from '@mikro-orm/postgresql';
 import { defineConfig as defineSqliteConfig } from '@mikro-orm/sqlite';
 import { IConfig } from './interfaces/config.interface';
 import { redisUrlToOptions } from './utils/redis-url-to-options.util';
+import { isUndefined } from './utils/validation.util';
 
 export function config(): IConfig {
   const testing = process.env.NODE_ENV !== 'production';
@@ -94,7 +95,58 @@ export function config(): IConfig {
     },
     twoFactorTime: parseInt(process.env.TWO_FACTOR_TIME, 10),
     testing,
-    googleOAuthFlag: process.env.GOOGLE_OAUTH_FLAG === 'true',
-    appleOAuthFlag: process.env.APPLE_OAUTH_FLAG === 'true',
+    oauth2: {
+      microsoft: isUndefined(process.env.MICROSOFT_CLIENT_ID)
+        ? null
+        : {
+            client: {
+              id: process.env.MICROSOFT_CLIENT_ID,
+              secret: process.env.MICROSOFT_CLIENT_SECRET,
+            },
+            authorization: {
+              redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
+              scope: ['openid', 'profile', 'email'],
+            },
+          },
+      google: isUndefined(process.env.GOOGLE_CLIENT_ID)
+        ? null
+        : {
+            client: {
+              id: process.env.GOOGLE_CLIENT_ID,
+              secret: process.env.GOOGLE_CLIENT_SECRET,
+            },
+            authorization: {
+              redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+              scope: [
+                'https://www.googleapis.com/auth/userinfo.email',
+                'https://www.googleapis.com/auth/userinfo.profile',
+              ],
+            },
+          },
+      facebook: isUndefined(process.env.FACEBOOK_CLIENT_ID)
+        ? null
+        : {
+            client: {
+              id: process.env.FACEBOOK_CLIENT_ID,
+              secret: process.env.FACEBOOK_CLIENT_SECRET,
+            },
+            authorization: {
+              redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
+              scope: ['email', 'public_profile'],
+            },
+          },
+      github: isUndefined(process.env.GITHUB_CLIENT_ID)
+        ? null
+        : {
+            client: {
+              id: process.env.GITHUB_CLIENT_ID,
+              secret: process.env.GITHUB_CLIENT_SECRET,
+            },
+            authorization: {
+              redirect_uri: process.env.GITHUB_REDIRECT_URI,
+              scope: ['user:email', 'read:user'],
+            },
+          },
+    },
   };
 }

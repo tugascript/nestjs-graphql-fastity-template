@@ -14,13 +14,13 @@
 */
 
 export interface ISingleJwt {
-  secret: string;
-  time: number;
+  readonly secret: string;
+  readonly time: number;
 }
 
 export interface IJwt {
-  access: ISingleJwt;
-  confirmation: ISingleJwt;
-  resetPassword: ISingleJwt;
-  refresh: ISingleJwt;
+  readonly access: ISingleJwt;
+  readonly confirmation: ISingleJwt;
+  readonly resetPassword: ISingleJwt;
+  readonly refresh: ISingleJwt;
 }

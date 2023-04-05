@@ -14,21 +14,25 @@
 */
 
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
-import { Oauth2Service } from './oauth2.service';
-import { OAuthFlagGuard } from './guards/oauth-flag.guard';
-import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
-import { Public } from '../auth/decorators/public.decorator';
+import { ConfigService } from '@nestjs/config';
+import { ApiNotFoundResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { FastifyReply } from 'fastify';
+import { Public } from '../auth/decorators/public.decorator';
+import { FastifyThrottlerGuard } from '../auth/guards/fastify-throttler.guard';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
+import { CallbackQueryDto } from './dtos/callback-query.dto';
+import { OAuthFlagGuard } from './guards/oauth-flag.guard';
 import {
   IFacebookUser,
   IGitHubUser,
   IGoogleUser,
   IMicrosoftUser,
 } from './interfaces/user-response.interface';
-import { CallbackQueryDto } from './dtos/callback-query.dto';
-import { ConfigService } from '@nestjs/config';
+import { Oauth2Service } from './oauth2.service';
 
+@ApiTags('Oauth2')
 @Controller('api/oauth2')
+@UseGuards(FastifyThrottlerGuard)
 export class Oauth2Controller {
   private readonly url: string;
   private readonly cookiePath = '/api/auth';
@@ -49,6 +53,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.MICROSOFT))
   @Get('microsoft')
+  @ApiResponse({
+    description: 'Redirects to Microsoft OAuth2 login page',
+    status: 302,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Microsoft',
+  })
   public microsoft(@Res() res: FastifyReply): FastifyReply {
     return res.redirect(
       this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.MICROSOFT),
@@ -58,6 +69,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.MICROSOFT))
   @Get('microsoft/callback')
+  @ApiResponse({
+    description: 'Redirects to the frontend with the JWT token',
+    status: 301,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Microsoft',
+  })
   public async microsoftCallback(
     @Query() cbQuery: CallbackQueryDto,
     @Res() res: FastifyReply,
@@ -71,6 +89,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.GOOGLE))
   @Get('google')
+  @ApiResponse({
+    description: 'Redirects to Google OAuth2 login page',
+    status: 302,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Google',
+  })
   public google(@Res() res: FastifyReply): FastifyReply {
     return res.redirect(
       this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.GOOGLE),
@@ -80,6 +105,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.GOOGLE))
   @Get('google/callback')
+  @ApiResponse({
+    description: 'Redirects to the frontend with the JWT token',
+    status: 301,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Google',
+  })
   public async googleCallback(
     @Query() cbQuery: CallbackQueryDto,
     @Res() res: FastifyReply,
@@ -95,6 +127,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.FACEBOOK))
   @Get('facebook')
+  @ApiResponse({
+    description: 'Redirects to Facebook OAuth2 login page',
+    status: 302,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Facebook',
+  })
   public facebook(@Res() res: FastifyReply): FastifyReply {
     return res.redirect(
       this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.FACEBOOK),
@@ -104,6 +143,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.FACEBOOK))
   @Get('facebook/callback')
+  @ApiResponse({
+    description: 'Redirects to the frontend with the JWT token',
+    status: 301,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for Facebook',
+  })
   public async facebookCallback(
     @Query() cbQuery: CallbackQueryDto,
     @Res() res: FastifyReply,
@@ -119,6 +165,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.GITHUB))
   @Get('github')
+  @ApiResponse({
+    description: 'Redirects to GitHub OAuth2 login page',
+    status: 302,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for GitHub',
+  })
   public github(@Res() res: FastifyReply): FastifyReply {
     return res.redirect(
       this.oauth2Service.generateAuthorizationUrl(OAuthProvidersEnum.GITHUB),
@@ -128,6 +181,13 @@ export class Oauth2Controller {
   @Public()
   @UseGuards(OAuthFlagGuard(OAuthProvidersEnum.GITHUB))
   @Get('github/callback')
+  @ApiResponse({
+    description: 'Redirects to the frontend with the JWT token',
+    status: 301,
+  })
+  @ApiNotFoundResponse({
+    description: 'OAuth2 is not enabled for GitHub',
+  })
   public async githubCallback(
     @Query() cbQuery: CallbackQueryDto,
     @Res() res: FastifyReply,

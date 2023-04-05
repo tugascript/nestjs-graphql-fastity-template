@@ -21,6 +21,9 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { CommonModule } from '../../common/common.module';
+import { LocalMessageType } from '../../common/entities/gql/message.type';
+import { createRequestMock } from '../../common/tests/mocks/request.mock';
+import { createResponseMock } from '../../common/tests/mocks/response.mock';
 import { config } from '../../config';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
 import { ThrottlerConfig } from '../../config/throttler.config';
@@ -128,7 +131,7 @@ describe('AuthController', () => {
         password1: password,
         password2: password,
       });
-      expect(message).toBeInstanceOf(MessageMapper);
+      expect(message).toBeInstanceOf(LocalMessageType);
       expect(message.message).toBe('Registration successful');
     });
 
@@ -296,7 +299,7 @@ describe('AuthController', () => {
       const message = await controller.forgotPassword(origin, {
         email: faker.internet.email(),
       });
-      expect(message).toBeInstanceOf(MessageMapper);
+      expect(message).toBeInstanceOf(LocalMessageType);
       expect(message.message).toBe('Reset password email sent');
       expect(emailService.sendResetPasswordEmail).not.toHaveBeenCalled();
     });
@@ -305,7 +308,7 @@ describe('AuthController', () => {
       const message = await controller.forgotPassword(origin, {
         email,
       });
-      expect(message).toBeInstanceOf(MessageMapper);
+      expect(message).toBeInstanceOf(LocalMessageType);
       expect(message.message).toBe('Reset password email sent');
       expect(emailService.sendResetPasswordEmail).toHaveBeenCalled();
     });
@@ -375,7 +378,7 @@ describe('AuthController', () => {
         password1: password,
         password2: password,
       });
-      expect(message).toBeInstanceOf(MessageMapper);
+      expect(message).toBeInstanceOf(LocalMessageType);
       expect(message.message).toBe('Password reset successfully');
     });
   });

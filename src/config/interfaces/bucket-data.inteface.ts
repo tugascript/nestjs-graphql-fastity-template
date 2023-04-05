@@ -14,6 +14,6 @@
 */
 
 export interface IBucketData {
-  name: string;
-  url: string;
+  readonly name: string;
+  readonly url: string;
 }
