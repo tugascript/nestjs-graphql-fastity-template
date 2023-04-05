@@ -21,7 +21,7 @@ export enum CursorTypeEnum {
   NUMBER = 'NUMBER',
 }
 
-export const getCursorType = (cursor: QueryCursorEnum) =>
+export const getCursorType = (cursor: QueryCursorEnum): CursorTypeEnum =>
   cursor === QueryCursorEnum.DATE
     ? CursorTypeEnum.NUMBER
     : CursorTypeEnum.STRING;

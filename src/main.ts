@@ -29,7 +29,7 @@ import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),

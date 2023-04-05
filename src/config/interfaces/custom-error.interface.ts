@@ -13,7 +13,14 @@
  Afonso Barracha
 */
 
-import { CustomDecorator, SetMetadata } from '@nestjs/common';
+import { GraphQLError } from 'graphql';
 
-export const IS_PUBLIC_KEY = 'isPublic';
-export const Public = (): CustomDecorator => SetMetadata(IS_PUBLIC_KEY, true);
+interface IResponse {
+  readonly errors: GraphQLError[];
+  readonly data: null;
+}
+
+export interface ICustomError {
+  readonly statusCode: number;
+  readonly response: IResponse;
+}

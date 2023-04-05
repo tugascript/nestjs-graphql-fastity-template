@@ -31,6 +31,7 @@ import mqRedis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { IGqlCtx } from '../common/interfaces/gql-ctx.interface';
 import { LoadersService } from '../loaders/loaders.service';
+import { ICustomError } from './interfaces/custom-error.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
 import { isNull, isUndefined } from './utils/validation.util';
@@ -117,7 +118,7 @@ export class GqlConfigService
             return false;
           }
         },
-        onDisconnect: async (ctx) => {
+        onDisconnect: async (ctx): Promise<void> => {
           const { ws } = ctx as IGqlCtx;
 
           if (!ws) return;
@@ -141,7 +142,7 @@ export class GqlConfigService
         },
       },
       autoSchemaFile: './schema.gql',
-      errorFormatter: (error) => {
+      errorFormatter: (error): ICustomError => {
         const org = error.errors[0].originalError as HttpException;
         return {
           statusCode: org.getStatus(),

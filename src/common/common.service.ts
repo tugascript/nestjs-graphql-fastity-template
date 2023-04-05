@@ -409,7 +409,10 @@ export class CommonService {
    * Checks is an error is of the code 23505, PostgreSQL's duplicate value error,
    * and throws a conflict exception
    */
-  public async throwDuplicateError<T>(promise: Promise<T>, message?: string) {
+  public async throwDuplicateError<T>(
+    promise: Promise<T>,
+    message?: string,
+  ): Promise<T> {
     try {
       return await promise;
     } catch (error) {

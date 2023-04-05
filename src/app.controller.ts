@@ -27,12 +27,12 @@ export class AppController {
   }
 
   @Get()
-  public getInitialRoute() {
+  public getInitialRoute(): string {
     return `Server running on ${this.port}`;
   }
 
   @Get('/favicon.ico')
-  public getFavicon(@Res() res: FastifyReply) {
+  public getFavicon(@Res() res: FastifyReply): void {
     res.sendFile('/favicon.ico');
   }
 }

@@ -13,7 +13,9 @@
  Afonso Barracha
 */
 
-import { CustomDecorator, SetMetadata } from '@nestjs/common';
+import { FastifyReply, FastifyRequest } from 'fastify';
 
-export const IS_PUBLIC_KEY = 'isPublic';
-export const Public = (): CustomDecorator => SetMetadata(IS_PUBLIC_KEY, true);
+export interface IFastifyExpress {
+  readonly req: FastifyRequest;
+  readonly res: FastifyReply;
+}

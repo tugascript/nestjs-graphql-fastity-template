@@ -264,7 +264,7 @@ export class AuthController {
     @Req() req: FastifyRequest,
     @Body() changeTwoFactorDto: ChangeTwoFactorDto,
     @Res() res: FastifyReply,
-  ) {
+  ): Promise<void> {
     const token = this.refreshTokenFromReq(req);
     const result = await this.authService.updateTwoFactor(
       userId,
