@@ -25,6 +25,8 @@ import { CommonService } from '../../common/common.service';
 import { config } from '../../config';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
 import { validationSchema } from '../../config/validation.config';
+import { UploaderModule } from '../../uploader/uploader.module';
+import { OAuthProviderEntity } from '../entities/oauth-provider.entity';
 import { UserEntity } from '../entities/user.entity';
 import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
 import { UsersService } from '../users.service';
@@ -51,8 +53,9 @@ describe('UsersService', () => {
           imports: [ConfigModule],
           useClass: MikroOrmConfig,
         }),
-        MikroOrmModule.forFeature([UserEntity]),
+        MikroOrmModule.forFeature([UserEntity, OAuthProviderEntity]),
         CommonModule,
+        UploaderModule,
       ],
       providers: [UsersService, CommonModule],
     }).compile();

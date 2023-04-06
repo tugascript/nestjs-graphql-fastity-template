@@ -21,10 +21,10 @@ import {
   Property,
   Unique,
 } from '@mikro-orm/core';
-import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
 import { IsEnum } from 'class-validator';
-import { UserEntity } from './user.entity';
 import { IOAuthProvider } from '../../oauth2/interfaces/oauth-provider.interface';
+import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
+import { UserEntity } from './user.entity';
 
 @Entity({ tableName: 'oauth_providers' })
 @Unique({ properties: ['provider', 'user'] })
@@ -41,6 +41,7 @@ export class OAuthProviderEntity implements IOAuthProvider {
   @ManyToOne({
     entity: () => UserEntity,
     primary: true,
+    onDelete: 'cascade',
   })
   public user: UserEntity;
 

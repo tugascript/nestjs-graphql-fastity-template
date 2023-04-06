@@ -16,7 +16,7 @@
 import { faker } from '@faker-js/faker';
 import { MikroORM } from '@mikro-orm/core';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { CacheModule } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ThrottlerModule } from '@nestjs/throttler';
@@ -88,7 +88,7 @@ describe('AuthController', () => {
     jwtService = module.get<JwtService>(JwtService);
 
     const configService = module.get<ConfigService>(ConfigService);
-    origin = configService.get<string>('domain');
+    origin = configService.get<string>('DOMAIN');
     cookieName = configService.get<string>('REFRESH_COOKIE');
   });
 
