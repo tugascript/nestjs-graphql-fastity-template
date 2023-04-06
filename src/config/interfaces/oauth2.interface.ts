@@ -13,11 +13,11 @@
  Afonso Barracha
 */
 
-import { IOAuth } from '../../oauth2/interfaces/oauth.interface';
+import { IClient } from '../../oauth2/interfaces/client.interface';
 
 export interface IOAuth2 {
-  readonly microsoft: IOAuth | null;
-  readonly google: IOAuth | null;
-  readonly facebook: IOAuth | null;
-  readonly github: IOAuth | null;
+  readonly microsoft: IClient | null;
+  readonly google: IClient | null;
+  readonly facebook: IClient | null;
+  readonly github: IClient | null;
 }

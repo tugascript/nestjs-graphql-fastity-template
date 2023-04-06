@@ -31,7 +31,7 @@ import { UsersService } from '../users/users.service';
 import { IAuth } from './interfaces/auth.interface';
 import { IAuthorization } from './interfaces/authorization.interface';
 import { ICallbackQuery } from './interfaces/callback-query.interface';
-import { IOAuth } from './interfaces/oauth.interface';
+import { IClient } from './interfaces/client.interface';
 import { IToken } from './interfaces/token.interface';
 
 @Injectable()
@@ -59,6 +59,7 @@ export class Oauth2Service {
     tokenPath: '/login/oauth/access_token',
     authorizePath: '/login/oauth/authorize',
   };
+  private readonly url: string;
   private readonly googleClient: AuthorizationCode | null;
   private readonly googleAuthorization: IAuthorization | null;
   private readonly microsoftClient: AuthorizationCode | null;
@@ -74,6 +75,7 @@ export class Oauth2Service {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
   ) {
+    this.url = configService.get('URL');
     [this.googleClient, this.googleAuthorization] =
       Oauth2Service.generateAuthorizationCode(
         OAuthProvidersEnum.GOOGLE,
@@ -119,19 +121,23 @@ export class Oauth2Service {
     provider: OAuthProvidersEnum,
     configService: ConfigService,
   ): [AuthorizationCode | null, IAuthorization | null] {
-    const oauth = configService.get<IOAuth | null>(
+    const client = configService.get<IClient | null>(
       `oauth2.${provider.toLowerCase()}`,
     );
     const auth = Oauth2Service.getAuth(provider);
+    const base = Oauth2Service.genAuthorization(
+      provider,
+      configService.get<string>('URL'),
+    );
 
-    if (isNull(oauth) || isNull(auth)) {
+    if (isNull(client) || isNull(auth) || isNull(base)) {
       return [null, null];
     }
 
     return [
-      new AuthorizationCode({ auth, client: oauth.client }),
+      new AuthorizationCode({ auth, client }),
       {
-        ...oauth.authorization,
+        ...base,
         state: Oauth2Service.generateState(),
       },
     ];
@@ -149,6 +155,41 @@ export class Oauth2Service {
         return 'https://api.github.com/user';
       default:
         throw new NotFoundException('Page not found');
+    }
+  }
+
+  private static genAuthorization(
+    provider: OAuthProvidersEnum,
+    url: string,
+  ): IAuthorization | null {
+    const redirect_uri = `${url}/${provider.toLowerCase()}`;
+
+    switch (provider) {
+      case OAuthProvidersEnum.GOOGLE:
+        return {
+          redirect_uri,
+          scope: [
+            'https://www.googleapis.com/auth/userinfo.email',
+            'https://www.googleapis.com/auth/userinfo.profile',
+          ],
+        };
+      case OAuthProvidersEnum.MICROSOFT:
+        return {
+          redirect_uri,
+          scope: ['openid', 'profile', 'email'],
+        };
+      case OAuthProvidersEnum.FACEBOOK:
+        return {
+          redirect_uri,
+          scope: ['email', 'public_profile'],
+        };
+      case OAuthProvidersEnum.GITHUB:
+        return {
+          redirect_uri,
+          scope: ['user:email', 'read:user'],
+        };
+      default:
+        return null;
     }
   }
 

@@ -14,7 +14,14 @@
 */
 
 import { Test, TestingModule } from '@nestjs/testing';
+import { v4 } from 'uuid';
+import { IClient } from '../interfaces/client.interface';
 import { Oauth2Service } from '../oauth2.service';
+
+const generateMockClient = (): IClient => ({
+  id: v4(),
+  secret: v4(),
+});
 
 describe('Oauth2Service', () => {
   let service: Oauth2Service;

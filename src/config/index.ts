@@ -29,7 +29,6 @@ export function config(): IConfig {
     loadStrategy: LoadStrategy.JOINED,
     allowGlobalContext: true,
   };
-
   return {
     port: parseInt(process.env.PORT, 10),
     url: process.env.URL,
@@ -55,10 +54,7 @@ export function config(): IConfig {
       host: process.env.EMAIL_HOST,
       port: parseInt(process.env.EMAIL_PORT, 10),
       secure: process.env.EMAIL_SECURE === 'true',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASSWORD },
     },
     bucketConfig: {
       forcePathStyle: false,
@@ -74,10 +70,7 @@ export function config(): IConfig {
       url: `https://${process.env.BUCKET_NAME}.${bucketBase}/`,
     },
     db: testing
-      ? defineSqliteConfig({
-          ...baseORMOptions,
-          dbName: ':memory:',
-        })
+      ? defineSqliteConfig({ ...baseORMOptions, dbName: ':memory:' })
       : definePGConfig({
           ...baseORMOptions,
           clientUrl: process.env.DATABASE_URL,
@@ -96,57 +89,38 @@ export function config(): IConfig {
     twoFactorTime: parseInt(process.env.TWO_FACTOR_TIME, 10),
     testing,
     oauth2: {
-      microsoft: isUndefined(process.env.MICROSOFT_CLIENT_ID)
-        ? null
-        : {
-            client: {
+      microsoft:
+        isUndefined(process.env.MICROSOFT_CLIENT_ID) ||
+        isUndefined(process.env.MICROSOFT_CLIENT_SECRET)
+          ? null
+          : {
               id: process.env.MICROSOFT_CLIENT_ID,
               secret: process.env.MICROSOFT_CLIENT_SECRET,
             },
-            authorization: {
-              redirect_uri: process.env.MICROSOFT_REDIRECT_URI,
-              scope: ['openid', 'profile', 'email'],
-            },
-          },
-      google: isUndefined(process.env.GOOGLE_CLIENT_ID)
-        ? null
-        : {
-            client: {
+      google:
+        isUndefined(process.env.GOOGLE_CLIENT_ID) ||
+        isUndefined(process.env.GOOGLE_CLIENT_SECRET)
+          ? null
+          : {
               id: process.env.GOOGLE_CLIENT_ID,
               secret: process.env.GOOGLE_CLIENT_SECRET,
             },
-            authorization: {
-              redirect_uri: process.env.GOOGLE_REDIRECT_URI,
-              scope: [
-                'https://www.googleapis.com/auth/userinfo.email',
-                'https://www.googleapis.com/auth/userinfo.profile',
-              ],
-            },
-          },
-      facebook: isUndefined(process.env.FACEBOOK_CLIENT_ID)
-        ? null
-        : {
-            client: {
+      facebook:
+        isUndefined(process.env.FACEBOOK_CLIENT_ID) ||
+        isUndefined(process.env.FACEBOOK_CLIENT_SECRET)
+          ? null
+          : {
               id: process.env.FACEBOOK_CLIENT_ID,
               secret: process.env.FACEBOOK_CLIENT_SECRET,
             },
-            authorization: {
-              redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
-              scope: ['email', 'public_profile'],
-            },
-          },
-      github: isUndefined(process.env.GITHUB_CLIENT_ID)
-        ? null
-        : {
-            client: {
+      github:
+        isUndefined(process.env.GITHUB_CLIENT_ID) ||
+        isUndefined(process.env.GITHUB_CLIENT_SECRET)
+          ? null
+          : {
               id: process.env.GITHUB_CLIENT_ID,
               secret: process.env.GITHUB_CLIENT_SECRET,
             },
-            authorization: {
-              redirect_uri: process.env.GITHUB_REDIRECT_URI,
-              scope: ['user:email', 'read:user'],
-            },
-          },
     },
   };
 }
