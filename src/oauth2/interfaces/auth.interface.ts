@@ -15,9 +15,9 @@
 
 export interface IAuth {
   readonly tokenHost: string;
-  readonly tokenPath?: string | undefined;
-  readonly refreshPath?: string | undefined;
-  readonly revokePath?: string | undefined;
-  readonly authorizeHost?: string | undefined;
-  readonly authorizePath?: string | undefined;
+  readonly tokenPath: string;
+  readonly authorizeHost: string;
+  readonly authorizePath: string;
+  readonly refreshPath?: string;
+  readonly revokePath?: string;
 }

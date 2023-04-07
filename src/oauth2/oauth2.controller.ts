@@ -205,7 +205,7 @@ export class Oauth2Controller {
   ): FastifyReply {
     return res
       .status(HttpStatus.TEMPORARY_REDIRECT)
-      .redirect(this.oauth2Service.generateAuthorizationUrl(provider));
+      .redirect(this.oauth2Service.getAuthorizationUrl(provider));
   }
 
   private async loginAndRedirect(

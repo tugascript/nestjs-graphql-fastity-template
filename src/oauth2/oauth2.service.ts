@@ -21,189 +21,71 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AxiosError } from 'axios';
-import { randomBytes } from 'crypto';
 import { catchError, firstValueFrom } from 'rxjs';
-import { AuthorizationCode } from 'simple-oauth2';
+import { CommonService } from '../common/common.service';
 import { isNull } from '../config/utils/validation.util';
 import { JwtService } from '../jwt/jwt.service';
 import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 import { UsersService } from '../users/users.service';
-import { IAuth } from './interfaces/auth.interface';
-import { IAuthorization } from './interfaces/authorization.interface';
+import { OAuthClass } from './classes/oauth.class';
 import { ICallbackQuery } from './interfaces/callback-query.interface';
 import { IClient } from './interfaces/client.interface';
-import { IToken } from './interfaces/token.interface';
 
 @Injectable()
 export class Oauth2Service {
-  private static readonly MICROSOFT_AUTH: IAuth = {
-    authorizeHost: 'https://login.microsoftonline.com',
-    authorizePath: '/common/oauth2/v2.0/authorize',
-    tokenHost: 'https://login.microsoftonline.com',
-    tokenPath: '/common/oauth2/v2.0/token',
-  };
-  private static readonly GOOGLE_AUTH: IAuth = {
-    authorizeHost: 'https://accounts.google.com',
-    authorizePath: '/o/oauth2/v2/auth',
-    tokenHost: 'https://www.googleapis.com',
-    tokenPath: '/oauth2/v4/token',
-  };
-  private static readonly FACEBOOK_AUTH: IAuth = {
-    authorizeHost: 'https://facebook.com',
-    authorizePath: '/v6.0/dialog/oauth',
-    tokenHost: 'https://graph.facebook.com',
-    tokenPath: '/v6.0/oauth/access_token',
-  };
-  private static readonly GITHUB_AUTH: IAuth = {
-    tokenHost: 'https://github.com',
-    tokenPath: '/login/oauth/access_token',
-    authorizePath: '/login/oauth/authorize',
-  };
-  private readonly url: string;
-  private readonly googleClient: AuthorizationCode | null;
-  private readonly googleAuthorization: IAuthorization | null;
-  private readonly microsoftClient: AuthorizationCode | null;
-  private readonly microsoftAuthorization: IAuthorization | null;
-  private readonly facebookClient: AuthorizationCode | null;
-  private readonly facebookAuthorization: IAuthorization | null;
-  private readonly githubClient: AuthorizationCode | null;
-  private readonly githubAuthorization: IAuthorization | null;
+  private readonly [OAuthProvidersEnum.MICROSOFT]: OAuthClass | null;
+  private readonly [OAuthProvidersEnum.GOOGLE]: OAuthClass | null;
+  private readonly [OAuthProvidersEnum.FACEBOOK]: OAuthClass | null;
+  private readonly [OAuthProvidersEnum.GITHUB]: OAuthClass | null;
 
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
+    private readonly commonService: CommonService,
   ) {
-    this.url = configService.get('URL');
-    [this.googleClient, this.googleAuthorization] =
-      Oauth2Service.generateAuthorizationCode(
-        OAuthProvidersEnum.GOOGLE,
-        configService,
-      );
-    [this.microsoftClient, this.microsoftAuthorization] =
-      Oauth2Service.generateAuthorizationCode(
-        OAuthProvidersEnum.MICROSOFT,
-        configService,
-      );
-    [this.facebookClient, this.facebookAuthorization] =
-      Oauth2Service.generateAuthorizationCode(
-        OAuthProvidersEnum.FACEBOOK,
-        configService,
-      );
-    [this.githubClient, this.githubAuthorization] =
-      Oauth2Service.generateAuthorizationCode(
-        OAuthProvidersEnum.GITHUB,
-        configService,
-      );
+    const url = configService.get<string>('URL');
+    this[OAuthProvidersEnum.MICROSOFT] = Oauth2Service.setOAuthClass(
+      OAuthProvidersEnum.MICROSOFT,
+      configService,
+      url,
+    );
+    this[OAuthProvidersEnum.GOOGLE] = Oauth2Service.setOAuthClass(
+      OAuthProvidersEnum.GOOGLE,
+      configService,
+      url,
+    );
+    this[OAuthProvidersEnum.FACEBOOK] = Oauth2Service.setOAuthClass(
+      OAuthProvidersEnum.FACEBOOK,
+      configService,
+      url,
+    );
+    this[OAuthProvidersEnum.GITHUB] = Oauth2Service.setOAuthClass(
+      OAuthProvidersEnum.GITHUB,
+      configService,
+      url,
+    );
   }
 
-  private static generateState(): string {
-    return randomBytes(16).toString('hex');
-  }
-
-  private static getAuth(provider: OAuthProvidersEnum): IAuth | null {
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return Oauth2Service.GOOGLE_AUTH;
-      case OAuthProvidersEnum.MICROSOFT:
-        return Oauth2Service.MICROSOFT_AUTH;
-      case OAuthProvidersEnum.FACEBOOK:
-        return Oauth2Service.FACEBOOK_AUTH;
-      case OAuthProvidersEnum.GITHUB:
-        return Oauth2Service.GITHUB_AUTH;
-      default:
-        return null;
-    }
-  }
-
-  private static generateAuthorizationCode(
+  private static setOAuthClass(
     provider: OAuthProvidersEnum,
     configService: ConfigService,
-  ): [AuthorizationCode | null, IAuthorization | null] {
+    url: string,
+  ): OAuthClass | null {
     const client = configService.get<IClient | null>(
       `oauth2.${provider.toLowerCase()}`,
     );
-    const auth = Oauth2Service.getAuth(provider);
-    const base = Oauth2Service.genAuthorization(
-      provider,
-      configService.get<string>('URL'),
-    );
 
-    if (isNull(client) || isNull(auth) || isNull(base)) {
-      return [null, null];
+    if (isNull(client)) {
+      return null;
     }
 
-    return [
-      new AuthorizationCode({ auth, client }),
-      {
-        ...base,
-        state: Oauth2Service.generateState(),
-      },
-    ];
+    return new OAuthClass(provider, client, url);
   }
 
-  private static getUserDataUrl(provider: OAuthProvidersEnum): string {
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return 'https://www.googleapis.com/oauth2/v3/userinfo';
-      case OAuthProvidersEnum.MICROSOFT:
-        return 'https://graph.microsoft.com/v1.0/me';
-      case OAuthProvidersEnum.FACEBOOK:
-        return 'https://graph.facebook.com/v16.0/me?fields=email,name,picture';
-      case OAuthProvidersEnum.GITHUB:
-        return 'https://api.github.com/user';
-      default:
-        throw new NotFoundException('Page not found');
-    }
-  }
-
-  private static genAuthorization(
-    provider: OAuthProvidersEnum,
-    url: string,
-  ): IAuthorization | null {
-    const redirect_uri = `${url}/${provider.toLowerCase()}`;
-
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return {
-          redirect_uri,
-          scope: [
-            'https://www.googleapis.com/auth/userinfo.email',
-            'https://www.googleapis.com/auth/userinfo.profile',
-          ],
-        };
-      case OAuthProvidersEnum.MICROSOFT:
-        return {
-          redirect_uri,
-          scope: ['openid', 'profile', 'email'],
-        };
-      case OAuthProvidersEnum.FACEBOOK:
-        return {
-          redirect_uri,
-          scope: ['email', 'public_profile'],
-        };
-      case OAuthProvidersEnum.GITHUB:
-        return {
-          redirect_uri,
-          scope: ['user:email', 'read:user'],
-        };
-      default:
-        return null;
-    }
-  }
-
-  /**
-   * Generates an authorization url for the given provider, so the user can be redirected to the provider's login page.
-   */
-  public generateAuthorizationUrl(provider: OAuthProvidersEnum): string {
-    const [code, authorization] = this.getOAuth(provider);
-
-    if (isNull(code) || isNull(authorization)) {
-      throw new NotFoundException('Page not found');
-    }
-
-    return code.authorizeURL(authorization);
+  public getAuthorizationUrl(provider: OAuthProvidersEnum): string {
+    return this.getOAuth(provider).authorizationUrl;
   }
 
   public async getUserData<T>(
@@ -214,7 +96,7 @@ export class Oauth2Service {
     const accessToken = await this.getAccessToken(provider, code, state);
     const userData = await firstValueFrom(
       this.httpService
-        .get<T>(Oauth2Service.getUserDataUrl(provider), {
+        .get<T>(this.getOAuth(provider).dataUrl, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${accessToken}`,
@@ -238,45 +120,27 @@ export class Oauth2Service {
     return this.jwtService.generateAuthTokens(user);
   }
 
+  private getOAuth(provider: OAuthProvidersEnum): OAuthClass {
+    const oauth = this[provider];
+
+    if (isNull(oauth)) {
+      throw new NotFoundException('Page not found');
+    }
+
+    return oauth;
+  }
+
   private async getAccessToken(
     provider: OAuthProvidersEnum,
     code: string,
     state: string,
   ): Promise<string> {
-    const [client, authorization] = this.getOAuth(provider);
+    const oauth = this.getOAuth(provider);
 
-    if (isNull(client) || isNull(authorization)) {
+    if (state !== oauth.state) {
       throw new NotFoundException('Page not found');
     }
 
-    if (state !== authorization.state) {
-      throw new NotFoundException('Page not found');
-    }
-
-    const result = await client.getToken({
-      code,
-      redirect_uri: authorization.redirect_uri,
-      scope: authorization.scope,
-    });
-
-    // TODO: Fix this (add custom interface)
-    return (result.token as unknown as IToken).access_token;
-  }
-
-  private getOAuth(
-    provider: OAuthProvidersEnum,
-  ): [AuthorizationCode, IAuthorization] {
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return [this.googleClient, this.googleAuthorization];
-      case OAuthProvidersEnum.MICROSOFT:
-        return [this.microsoftClient, this.microsoftAuthorization];
-      case OAuthProvidersEnum.FACEBOOK:
-        return [this.facebookClient, this.facebookAuthorization];
-      case OAuthProvidersEnum.GITHUB:
-        return [this.githubClient, this.githubAuthorization];
-      default:
-        throw new NotFoundException('Page not found');
-    }
+    return this.commonService.throwInternalError(oauth.getToken(code));
   }
 }

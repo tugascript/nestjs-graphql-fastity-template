@@ -16,5 +16,5 @@
 export interface IAuthorization {
   readonly redirect_uri: string;
   readonly scope: string | string[];
-  readonly state?: string | undefined;
+  readonly state: string;
 }
