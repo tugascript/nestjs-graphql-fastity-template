@@ -1,6 +1,6 @@
 {
   "name": "nestjs-graphql-fastify-template",
-  "version": "1.0.0",
+  "version": "0.3.0",
   "description": "NestJS & Mercurius Monolith Back-End API Template",
   "author": "Afonso Barracha",
   "private": true,

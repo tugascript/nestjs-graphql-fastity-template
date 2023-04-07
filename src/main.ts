@@ -54,7 +54,7 @@ async function bootstrap(): Promise<void> {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('NestJS API')
     .setDescription('An API made with NestJS')
-    .setVersion('1.0.0')
+    .setVersion('0.3.0')
     .addBearerAuth()
     .addTag('Authentication API')
     .build();

@@ -5,7 +5,7 @@
 Full [NodeJS](https://nodejs.org/en/) boilerplate of a [NestJS](https://nestjs.com/) [GraphQL](https://graphql.org/)
 monolithic backend API using [PostgreSQL](https://www.postgresql.org/) as the database.
 
-**NOTE:** Now that NestJS supports Mercurius plugins and hooks out of the box, this template is production ready.
+**NOTE:** Now that NestJS supports Mercurius plugins and hooks out of the box, this template is almost production ready.
 
 ### Technologies
 
@@ -33,12 +33,12 @@ In terms of frameworks it uses:
 **Authentication:**
 
 * [JWT](https://jwt.io/) Authentication (local [OAuth](https://oauth.net/2/)) for HTTP;
-* External OAuth Authentication under feature flags:
+* (Experimental) External OAuth Authentication under feature flags:
     - Google;
     - Facebook;
     - Microsoft;
     - GitHub;
-* Extended JWT Authentication for Websockets (based on Facebook Messenger Design);
+* Extended JWT Authentication for Websockets using hooks (might have unexpected behaviour, needs manual testing);
 * Two-Factor authentication with email.
 
 **Uploader:**
@@ -261,8 +261,6 @@ $ dokku domains:set app-name your-domain.com
 $ dokku letsencrypt:enable app-name
 $ dokku letsencrypt:cron-job --add 
 ```
-
-### Steps with Docker (Coderunners)
 
 ## Support the frameworks used in this template
 
