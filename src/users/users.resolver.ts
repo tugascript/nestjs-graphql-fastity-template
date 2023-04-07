@@ -1,3 +1,18 @@
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
 import {
   Args,
   Context,
@@ -11,105 +26,133 @@ import {
 import { PubSub } from 'mercurius';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
+import { CommonService } from '../common/common.service';
+import { IdDto } from '../common/dtos/id.dto';
 import { SearchDto } from '../common/dtos/search.dto';
 import { LocalMessageType } from '../common/entities/gql/message.type';
+import { ChangeTypeEnum } from '../common/enums/change-type.enum';
 import { IPaginated } from '../common/interfaces/paginated.interface';
-import { GetUserDto } from './dtos/get-user.dto';
+import { isNull, isUndefined } from '../config/utils/validation.util';
+import { PictureDto } from '../uploader/dtos/picture.dto';
+import { NameDto } from './dtos/name.dto';
 import { OnlineStatusDto } from './dtos/online-status.dto';
-import { ProfilePictureDto } from './dtos/profile-picture.dto';
-import { UserNotificationDto } from './dtos/user-notification.dto';
-import { UserDto } from './dtos/user.dto';
+import { PasswordDto } from './dtos/password.dto';
+import { UpdateEmailDto } from './dtos/update-email.dto';
+import { UsernameDto } from './dtos/username.dto';
 import { PaginatedUsersType } from './entities/gql/paginated-users.type';
-import { UserNotificationType } from './entities/gql/user-notification.type';
+import { UserChangeType } from './entities/gql/user-change.type';
 import { UserEntity } from './entities/user.entity';
 import { OnlineStatusEnum } from './enums/online-status.enum';
-import { IUserNotification } from './interfaces/user-notification.interface';
+import { IUserChange } from './interfaces/user-change.interface';
+import { IUser } from './interfaces/user.interface';
 import { UsersService } from './users.service';
+
+const USER_CHANGE_TOPIC = 'USER_CHANGE';
 
 @Resolver(() => UserEntity)
 export class UsersResolver {
-  constructor(private readonly usersService: UsersService) {}
-
-  //____________________ MUTATIONS ____________________
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly commonService: CommonService,
+  ) {}
 
   @Mutation(() => UserEntity)
-  public async updateProfilePicture(
+  public async updateUserPicture(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: ProfilePictureDto,
+    @Args() pictureDto: PictureDto,
   ): Promise<UserEntity> {
-    return this.usersService.updateProfilePicture(pubsub, userId, dto);
+    const user = await this.usersService.updatePicture(userId, pictureDto);
+    this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
+    return user;
   }
 
   @Mutation(() => UserEntity)
-  public async updateOnlineStatus(
+  public async updateUserOnlineStatus(
     @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args() dto: OnlineStatusDto,
+    @Args() onlineStatusDto: OnlineStatusDto,
   ): Promise<UserEntity> {
-    return this.usersService.updateDefaultStatus(pubsub, userId, dto);
+    const user = await this.usersService.updateOnlineStatus(
+      userId,
+      onlineStatusDto.onlineStatus,
+    );
+    this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
+    return user;
+  }
+
+  @Mutation(() => UserEntity)
+  public async updateUserName(
+    @Context('pubsub') pubsub: PubSub,
+    @CurrentUser() userId: number,
+    @Args() nameDto: NameDto,
+  ): Promise<UserEntity> {
+    const user = await this.usersService.updateName(userId, nameDto.name);
+    this.publishUserChange(pubsub, user, ChangeTypeEnum.UPDATE);
+    return user;
+  }
+
+  @Mutation(() => UserEntity)
+  public async updateUserEmail(
+    @CurrentUser() userId: number,
+    @Args() updateEmailDto: UpdateEmailDto,
+  ): Promise<UserEntity> {
+    return this.usersService.updateEmail(userId, updateEmailDto);
   }
 
   @Mutation(() => LocalMessageType)
-  public async deleteAccount(
+  public async deleteUser(
+    @Context('pubsub') pubsub: PubSub,
     @CurrentUser() userId: number,
-    @Args('password') password: string,
+    @Args() passwordDto: PasswordDto,
   ): Promise<LocalMessageType> {
-    return this.usersService.deleteUser(userId, password);
-  }
-
-  //____________________ QUERIES ____________________
-
-  @Query(() => UserEntity)
-  public async me(@CurrentUser() userId: number): Promise<UserEntity> {
-    return this.usersService.userById(userId);
-  }
-
-  //____________________ PUBLIC QUERIES ____________________
-
-  @Public()
-  @Query(() => UserEntity)
-  public async userByUsername(@Args() dto: GetUserDto): Promise<UserEntity> {
-    return this.usersService.userByUsername(dto.username);
+    const user = await this.usersService.delete(userId, passwordDto.password);
+    this.publishUserChange(pubsub, user, ChangeTypeEnum.DELETE);
+    return new LocalMessageType('User deleted successfully');
   }
 
   @Public()
   @Query(() => UserEntity)
-  public async userById(@Args() dto: UserDto): Promise<UserEntity> {
-    return this.usersService.userById(dto.userId);
+  public async userById(@Args() dto: IdDto): Promise<UserEntity> {
+    return this.usersService.findOneById(dto.id);
   }
 
   @Public()
-  @Query(() => PaginatedUsersType, { name: 'users' })
-  public async filterUsers(
-    @Args() dto: SearchDto,
-  ): Promise<IPaginated<UserEntity>> {
-    return this.usersService.filterUsers(dto);
+  @Query(() => UserEntity)
+  public async userByUsername(@Args() dto: UsernameDto): Promise<UserEntity> {
+    return this.usersService.findOneByUsername(dto.username);
   }
 
   @Public()
-  @Subscription(() => UserNotificationType, {
-    filter: (payload: IUserNotification, variables: UserNotificationDto) => {
+  @Query(() => PaginatedUsersType)
+  public async queryUsers(@Args() dto: SearchDto): Promise<IPaginated<IUser>> {
+    return this.usersService.query(dto);
+  }
+
+  @Subscription(() => UserChangeType, {
+    filter: (payload: IUserChange, variables: IdDto): boolean => {
+      const { id } = variables;
       return (
-        !variables.userId ||
-        payload.userNotification.edge.node.id === variables.userId
+        isUndefined(id) || isNull(id) || payload.userChange.edge.node.id === id
       );
     },
   })
-  public async userNotification(
+  public async userChange(
     @Context('pubsub') pubsub: PubSub,
-    @Args() dto: UserNotificationDto,
-  ) {
-    return pubsub.subscribe<IUserNotification>('USER_NOTIFICATION');
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    @Args() _: IdDto,
+  ): Promise<unknown> {
+    return pubsub.subscribe<IUserChange>(USER_CHANGE_TOPIC);
   }
 
-  //____________________ RESOLVE FIELDS ____________________
   @ResolveField('email', () => String, { nullable: true })
   public resolveEmail(
     @Parent() user: UserEntity,
     @CurrentUser() userId?: number,
   ): string | null {
-    return userId && user.id === userId ? user.email : null;
+    return !isUndefined(userId) && !isNull(userId) && user.id === userId
+      ? user.email
+      : null;
   }
 
   @ResolveField('twoFactor', () => Boolean, { nullable: true })
@@ -117,7 +160,9 @@ export class UsersResolver {
     @Parent() user: UserEntity,
     @CurrentUser() userId?: number,
   ): boolean | null {
-    return userId && user.id === userId ? user.twoFactor : null;
+    return !isUndefined(userId) && !isNull(userId) && user.id === userId
+      ? user.twoFactor
+      : null;
   }
 
   @ResolveField('defaultStatus', () => OnlineStatusEnum, { nullable: true })
@@ -125,6 +170,25 @@ export class UsersResolver {
     @Parent() user: UserEntity,
     @CurrentUser() userId?: number,
   ): OnlineStatusEnum | null {
-    return userId && user.id === userId ? user.defaultStatus : null;
+    return !isUndefined(userId) && !isNull(userId) && user.id === userId
+      ? user.defaultStatus
+      : null;
+  }
+
+  private publishUserChange(
+    pubsub: PubSub,
+    user: UserEntity,
+    notificationType: ChangeTypeEnum,
+  ): void {
+    pubsub.publish<IUserChange>({
+      topic: USER_CHANGE_TOPIC,
+      payload: {
+        userChange: this.commonService.generateChange(
+          user,
+          notificationType,
+          'username',
+        ),
+      },
+    });
   }
 }

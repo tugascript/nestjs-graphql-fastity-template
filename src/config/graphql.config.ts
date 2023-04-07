@@ -1,6 +1,26 @@
-import { HttpException, Injectable } from '@nestjs/common';
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
+import {
+  HttpException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
+import { MercuriusDriverConfig, MercuriusPlugin } from '@nestjs/mercurius';
 import AltairFastify, {
   AltairFastifyPluginOptions,
 } from 'altair-fastify-plugin';
@@ -11,14 +31,14 @@ import mqRedis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { IGqlCtx } from '../common/interfaces/gql-ctx.interface';
 import { LoadersService } from '../loaders/loaders.service';
-import { MercuriusPlugin } from './interfaces/mercurius-plugin.interface';
-import { MercuriusExtendedDriverConfig } from './interfaces/mercurius-extended-driver-config.interface';
+import { ICustomError } from './interfaces/custom-error.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
+import { isNull, isUndefined } from './utils/validation.util';
 
 @Injectable()
 export class GqlConfigService
-  implements GqlOptionsFactory<MercuriusExtendedDriverConfig>
+  implements GqlOptionsFactory<MercuriusDriverConfig>
 {
   private readonly testing = this.configService.get<boolean>('testing');
   private readonly redisOpt = this.configService.get<RedisOptions>('redis');
@@ -29,8 +49,10 @@ export class GqlConfigService
     private readonly loadersService: LoadersService,
   ) {}
 
-  public createGqlOptions(): MercuriusExtendedDriverConfig {
-    const plugins: MercuriusPlugin[] = [
+  public createGqlOptions(): MercuriusDriverConfig {
+    const plugins: MercuriusPlugin<
+      MercuriusCacheOptions | AltairFastifyPluginOptions
+    >[] = [
       {
         plugin: mercuriusCache,
         options: {
@@ -96,7 +118,7 @@ export class GqlConfigService
             return false;
           }
         },
-        onDisconnect: async (ctx) => {
+        onDisconnect: async (ctx): Promise<void> => {
           const { ws } = ctx as IGqlCtx;
 
           if (!ws) return;
@@ -104,8 +126,23 @@ export class GqlConfigService
           await this.authService.closeUserSession(ws);
         },
       },
+      hooks: {
+        preSubscriptionExecution: async (
+          _,
+          __,
+          ctx: IGqlCtx,
+        ): Promise<void> => {
+          const { ws } = ctx;
+
+          if (isUndefined(ws) || isNull(ws)) {
+            throw new UnauthorizedException('Unauthorized');
+          }
+
+          await this.authService.refreshUserSession(ws);
+        },
+      },
       autoSchemaFile: './schema.gql',
-      errorFormatter: (error) => {
+      errorFormatter: (error): ICustomError => {
         const org = error.errors[0].originalError as HttpException;
         return {
           statusCode: org.getStatus(),

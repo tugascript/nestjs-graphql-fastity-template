@@ -1,10 +1,24 @@
-/* eslint-disable @typescript-eslint/no-inferrable-types */
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
 import { Embeddable, Property } from '@mikro-orm/core';
 import dayjs from 'dayjs';
 import { ICredentials } from '../interfaces/credentials.interface';
 
 @Embeddable()
-export class CredentialsEmbeddable {
+export class CredentialsEmbeddable implements ICredentials {
   @Property({ default: 0 })
   public version: number = 0;
 
@@ -12,22 +26,17 @@ export class CredentialsEmbeddable {
   public lastPassword: string = '';
 
   @Property({ default: dayjs().unix() })
-  public updatedAt: number = dayjs().unix();
+  public passwordUpdatedAt: number = dayjs().unix();
 
-  constructor(input?: Partial<ICredentials>) {
-    // NOTE: I know this can be done with a for in
-    if (input) {
-      const { version, lastPassword, updatedAt } = input;
-      this.version = version ?? this.version;
-      this.lastPassword = lastPassword ?? this.lastPassword;
-      this.updatedAt = updatedAt ?? this.updatedAt;
-    }
-  }
+  @Property({ default: dayjs().unix() })
+  public updatedAt: number = dayjs().unix();
 
   public updatePassword(password: string): void {
     this.version++;
     this.lastPassword = password;
-    this.updatedAt = dayjs().unix();
+    const now = dayjs().unix();
+    this.passwordUpdatedAt = now;
+    this.updatedAt = now;
   }
 
   public updateVersion(): void {

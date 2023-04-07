@@ -1,262 +1,338 @@
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
 import {
   BadRequestException,
   CACHE_MANAGER,
+  ConflictException,
   Inject,
   Injectable,
+  Logger,
+  LoggerService,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
-import { PubSub } from 'mercurius';
-import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
-import { RegisterDto } from '../auth/dtos/register.dto';
-import { ISessionsData } from '../auth/interfaces/sessions-data.interface';
-import { ITokenPayload } from '../auth/interfaces/token-payload.interface';
+import { ISessionsData } from '../auth/interfaces/session-data.interface';
 import { CommonService } from '../common/common.service';
 import { SearchDto } from '../common/dtos/search.dto';
-import { LocalMessageType } from '../common/entities/gql/message.type';
-import { getCursorType } from '../common/enums/cursor-type.enum';
-import { NotificationTypeEnum } from '../common/enums/notification-type.enum';
-import { getUserQueryCursor } from '../common/enums/query-cursor.enum';
+import { CursorTypeEnum } from '../common/enums/cursor-type.enum';
+import { QueryOrderEnum } from '../common/enums/query-order.enum';
 import { RatioEnum } from '../common/enums/ratio.enum';
 import { IPaginated } from '../common/interfaces/paginated.interface';
+import { isNull, isUndefined } from '../config/utils/validation.util';
+import { PictureDto } from '../uploader/dtos/picture.dto';
 import { UploaderService } from '../uploader/uploader.service';
-import { OnlineStatusDto } from './dtos/online-status.dto';
-import { ProfilePictureDto } from './dtos/profile-picture.dto';
+import { UpdateEmailDto } from './dtos/update-email.dto';
 import { UserEntity } from './entities/user.entity';
-import { IUserNotification } from './interfaces/user-notification.interface';
+import { OnlineStatusEnum } from './enums/online-status.enum';
+import { IUser } from './interfaces/user.interface';
+import { OAuthProvidersEnum } from './enums/oauth-providers.enum';
+import { OAuthProviderEntity } from './entities/oauth-provider.entity';
 
 @Injectable()
 export class UsersService {
-  private readonly wsNamespace = this.configService.get<string>('WS_UUID');
-  private readonly wsAccessTime =
-    this.configService.get<number>('jwt.wsAccess.time');
+  private readonly queryName = 'u';
+  private readonly loggerService: LoggerService;
 
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: EntityRepository<UserEntity>,
-    private readonly commonService: CommonService,
+    @InjectRepository(OAuthProviderEntity)
+    private readonly oauthProvidersRepository: EntityRepository<OAuthProviderEntity>,
     private readonly uploaderService: UploaderService,
-    private readonly configService: ConfigService,
+    private readonly commonService: CommonService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) {}
+  ) {
+    this.loggerService = new Logger(UsersService.name);
+  }
 
-  //____________________ MUTATIONS ____________________
-
-  /**
-   * Create User
-   *
-   * Creates a new user and saves him in db
-   */
-  public async createUser({
-    name,
-    email,
-    password1,
-    password2,
-  }: RegisterDto): Promise<UserEntity> {
-    if (password1 !== password2)
-      throw new BadRequestException('Passwords do not match');
-
-    email = email.toLowerCase();
-    name = this.commonService.formatTitle(name);
-    const password = await hash(password1, 10);
-    let username = this.commonService.generatePointSlug(name);
-
-    if (username.length >= 3) {
-      const count = await this.usersRepository.count({
-        username: { $like: `${username}%` },
-      });
-      if (count > 0) username += count.toString();
-    } else {
-      username = uuidV4();
-    }
-
+  public async create(
+    provider: OAuthProvidersEnum,
+    email: string,
+    name: string,
+    password?: string,
+  ): Promise<UserEntity> {
+    const formattedEmail = email.toLowerCase();
+    await this.checkEmailUniqueness(formattedEmail);
+    const formattedName = this.commonService.formatTitle(name);
     const user = this.usersRepository.create({
-      name,
-      username,
-      email,
-      password,
+      email: formattedEmail,
+      name: formattedName,
+      username: await this.generateUsername(formattedName),
+      password: isUndefined(password) ? 'UNSET' : await hash(password, 10),
+      confirmed: provider !== OAuthProvidersEnum.LOCAL,
     });
-
-    await this.saveUserToDb(user, true);
+    await this.commonService.saveEntity(this.usersRepository, user, true);
+    await this.createOAuthProvider(provider, user);
     return user;
   }
 
-  /**
-   * Update Profile Picture
-   *
-   * Updates the current user profile picture and deletes
-   * the old one if it exits
-   */
-  public async updateProfilePicture(
-    pubsub: PubSub,
-    userId: number,
-    { picture }: ProfilePictureDto,
+  public async findOrCreate(
+    provider: OAuthProvidersEnum,
+    email: string,
+    name: string,
   ): Promise<UserEntity> {
-    const user = await this.userById(userId);
-    const toDelete = user.picture;
+    const formattedEmail = email.toLowerCase();
+    const user = await this.usersRepository.findOne(
+      {
+        email: formattedEmail,
+      },
+      {
+        populate: ['authProviders'],
+      },
+    );
 
+    if (isUndefined(user) || isNull(user)) {
+      return this.create(provider, email, name);
+    }
+    if (
+      !user.authProviders.contains(
+        this.oauthProvidersRepository.getReference([provider, user.id]),
+      )
+    ) {
+      await this.createOAuthProvider(provider, user);
+    }
+
+    return user;
+  }
+
+  public async findOneById(id: number): Promise<UserEntity> {
+    const user = await this.usersRepository.findOne({ id });
+    this.commonService.checkEntityExistence(user, 'User');
+    return user;
+  }
+
+  public async findOneByUsername(
+    username: string,
+    forAuth = false,
+  ): Promise<UserEntity> {
+    const user = await this.usersRepository.findOne({
+      username: username.toLowerCase(),
+    });
+
+    if (forAuth) {
+      this.throwUnauthorizedException(user);
+    } else {
+      this.commonService.checkEntityExistence(user, 'User');
+    }
+
+    return user;
+  }
+
+  public async findOneByEmail(email: string): Promise<UserEntity> {
+    const user = await this.usersRepository.findOne({
+      email: email.toLowerCase(),
+    });
+    this.throwUnauthorizedException(user);
+    return user;
+  }
+
+  // necessary for password reset
+  public async uncheckedUserByEmail(email: string): Promise<UserEntity> {
+    return this.usersRepository.findOne({
+      email: email.toLowerCase(),
+    });
+  }
+
+  public async findOneByCredentials(
+    id: number,
+    version: number,
+  ): Promise<UserEntity> {
+    const user = await this.usersRepository.findOne({ id });
+    this.throwUnauthorizedException(user);
+
+    if (user.credentials.version !== version) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    return user;
+  }
+
+  public async confirmEmail(
+    userId: number,
+    version: number,
+  ): Promise<UserEntity> {
+    const user = await this.findOneByCredentials(userId, version);
+
+    if (user.confirmed) {
+      throw new BadRequestException('Email already confirmed');
+    }
+
+    user.confirmed = true;
+    user.credentials.updateVersion();
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updatePassword(
+    userId: number,
+    password: string,
+    newPassword: string,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+
+    if (!(await compare(password, user.password))) {
+      throw new BadRequestException('Wrong password');
+    }
+    if (await compare(newPassword, user.password)) {
+      throw new BadRequestException('New password must be different');
+    }
+
+    user.credentials.updatePassword(user.password);
+    user.password = await hash(newPassword, 10);
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async resetPassword(
+    userId: number,
+    version: number,
+    password: string,
+  ): Promise<UserEntity> {
+    const user = await this.findOneByCredentials(userId, version);
+    user.credentials.updatePassword(user.password);
+    user.password = await hash(password, 10);
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateEmail(
+    userId: number,
+    updateEmailDto: UpdateEmailDto,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    const { email, password } = updateEmailDto;
+
+    if (!(await compare(password, user.password))) {
+      throw new BadRequestException('Wrong password');
+    }
+
+    const formattedEmail = email.toLowerCase();
+
+    if (user.email === formattedEmail) {
+      throw new BadRequestException('Email should be different');
+    }
+
+    await this.checkEmailUniqueness(formattedEmail);
+    user.email = formattedEmail;
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async delete(userId: number, password: string): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+
+    if (!(await compare(password, user.password))) {
+      throw new BadRequestException('Wrong password');
+    }
+
+    await this.commonService.removeEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateInternal(
+    user: UserEntity,
+    data: Partial<IUser>,
+  ): Promise<void> {
+    Object.entries(data).forEach(([key, value]) => {
+      if (isUndefined(value)) {
+        return;
+      }
+      user[key] = value;
+    });
+    await this.commonService.saveEntity(this.usersRepository, user);
+  }
+
+  public async updatePicture(
+    userId: number,
+    updateDto: PictureDto,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    const oldPicture = user.picture;
+    const { picture } = updateDto;
     user.picture = await this.uploaderService.uploadImage(
       userId,
       picture,
       RatioEnum.SQUARE,
     );
 
-    if (toDelete) await this.uploaderService.deleteFile(toDelete);
-
-    await this.saveUserToDb(user);
-    this.publishUserNotification(pubsub, user, NotificationTypeEnum.UPDATE);
-    return user;
-  }
-
-  /**
-   * Update Default Status
-   *
-   * Updates the default online status of current user
-   */
-  public async updateDefaultStatus(
-    pubsub: PubSub,
-    userId: number,
-    { defaultStatus }: OnlineStatusDto,
-  ): Promise<UserEntity> {
-    const user = await this.userById(userId);
-    user.defaultStatus = defaultStatus;
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
-    const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
-    );
-
-    if (sessionData) {
-      user.onlineStatus = defaultStatus;
-      await this.commonService.throwInternalError(
-        this.cacheManager.set(userUuid, sessionData, this.wsAccessTime),
-      );
-      this.publishUserNotification(pubsub, user, NotificationTypeEnum.UPDATE);
+    if (!isUndefined(oldPicture) && !isNull(oldPicture)) {
+      this.uploaderService
+        .deleteFile(oldPicture)
+        .then(() => {
+          this.loggerService.log(`Deleted old picture: ${oldPicture}`);
+        })
+        .catch(() => {
+          this.loggerService.error(`Error deleting old picture: ${oldPicture}`);
+        });
     }
 
-    await this.saveUserToDb(user);
+    await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
 
-  /**
-   * Delete User
-   *
-   * Deletes current user account
-   */
-  public async deleteUser(
+  public async updateName(userId: number, name: string): Promise<UserEntity> {
+    const formatName = this.commonService.formatTitle(name);
+    const user = await this.findOneById(userId);
+    user.name = formatName;
+    user.username = await this.generateUsername(formatName);
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async updateUsername(
     userId: number,
-    password: string,
-  ): Promise<LocalMessageType> {
-    const user = await this.userById(userId);
-
-    if (password.length > 1 && !(await compare(password, user.password)))
-      throw new BadRequestException('Wrong password!');
-
-    try {
-      await this.cacheManager.del(uuidV5(userId.toString(), this.wsNamespace));
-    } catch (_) {}
-
-    await this.commonService.removeEntity(this.usersRepository, user);
-    return new LocalMessageType('Account deleted successfully');
-  }
-
-  //____________________ QUERIES ____________________
-
-  /**
-   * Get User For Auth
-   *
-   * Gets a user by email for auth
-   */
-  public async getUserForAuth(email: string): Promise<UserEntity> {
-    email = email.toLowerCase();
-    const user = await this.usersRepository.findOne({ email });
-    if (!user) throw new UnauthorizedException('Invalid credentials');
+    username: string,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    const formattedUsername = username.toLowerCase();
+    await this.checkUsernameUniqueness(formattedUsername);
+    user.username = formattedUsername;
+    await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
 
-  /**
-   * Get Uncheck User
-   *
-   * Gets a user by email and does not check if it exists
-   */
-  public async getUncheckUser(
-    email: string,
-  ): Promise<UserEntity | undefined | null> {
-    email = email.toLowerCase();
-    return this.usersRepository.findOne({ email });
-  }
+  public async updateOnlineStatus(
+    userId: number,
+    onlineStatus: OnlineStatusEnum,
+  ): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+    user.defaultStatus = onlineStatus;
+    const data = await this.cacheManager.get<ISessionsData>(
+      `sessions:${userId}`,
+    );
 
-  /**
-   * Get Uncheck User by ID
-   *
-   * Gets a user by id and does not check if it exists
-   */
-  public async getUncheckUserById(
-    id: number,
-  ): Promise<UserEntity | undefined | null> {
-    return this.usersRepository.findOne({ id });
-  }
+    if (!isUndefined(data) && !isNull(data)) {
+      user.onlineStatus = onlineStatus;
+    }
 
-  /**
-   * Get User By Payload
-   *
-   * Gets user by jwt payload for auth
-   */
-  public async getUserByPayload({
-    id,
-    count,
-  }: ITokenPayload): Promise<UserEntity> {
-    const user = await this.usersRepository.findOne({ id });
-    if (!user || user.credentials.version !== count)
-      throw new UnauthorizedException('Token is invalid or has expired');
+    await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
 
-  /**
-   * Get User By ID
-   *
-   * Gets user by id, usually the current logged-in user
-   */
-  public async userById(id: number): Promise<UserEntity> {
-    const user = await this.usersRepository.findOne({ id });
-    this.commonService.checkExistence('User', user);
-    return user;
-  }
-
-  /**
-   * User By Username
-   *
-   * Gets user by username, usually for the profile (if it exists)
-   */
-  public async userByUsername(username: string): Promise<UserEntity> {
-    const user = await this.usersRepository.findOne({ username });
-    this.commonService.checkExistence('User', user);
-    return user;
-  }
-
-  /**
-   * Find Users
-   *
-   * Search users usernames and returns paginated results
-   */
-  public async filterUsers({
-    search,
-    order,
-    cursor,
-    first,
-    after,
-  }: SearchDto): Promise<IPaginated<UserEntity>> {
-    const name = 'u';
-
-    const qb = this.usersRepository.createQueryBuilder(name).where({
+  public async query(dto: SearchDto): Promise<IPaginated<IUser>> {
+    const { search, first, after } = dto;
+    const qb = this.usersRepository.createQueryBuilder(this.queryName).where({
       confirmed: true,
     });
 
-    if (search) {
+    if (!isUndefined(search) && !isNull(search)) {
       qb.andWhere({
         name: {
           $ilike: this.commonService.formatSearch(search),
@@ -264,44 +340,73 @@ export class UsersService {
       });
     }
 
-    return await this.commonService.queryBuilderPagination(
-      name,
-      getUserQueryCursor(cursor),
+    return this.commonService.queryBuilderPagination(
+      this.queryName,
+      'username',
+      CursorTypeEnum.STRING,
       first,
-      order,
+      QueryOrderEnum.ASC,
       qb,
       after,
-      getCursorType(cursor),
     );
   }
 
-  //____________________ OTHER ____________________
-
-  /**
-   * Save User To Database
-   *
-   * Inserts or updates user in the database.
-   * This method exists because saving the user has
-   * to be shared with the auth service.
-   */
-  public async saveUserToDb(user: UserEntity, isNew = false): Promise<void> {
-    await this.commonService.saveEntity(this.usersRepository, user, isNew);
+  private async createOAuthProvider(
+    provider: OAuthProvidersEnum,
+    user: UserEntity,
+  ): Promise<OAuthProviderEntity> {
+    const oauthProvider = this.oauthProvidersRepository.create({
+      provider,
+      user,
+    });
+    await this.commonService.saveEntity(
+      this.oauthProvidersRepository,
+      oauthProvider,
+      true,
+    );
+    return oauthProvider;
   }
 
-  private publishUserNotification(
-    pubsub: PubSub,
-    user: UserEntity,
-    notificationType: NotificationTypeEnum,
-  ) {
-    pubsub.publish<IUserNotification>({
-      topic: 'USER_NOTIFICATION',
-      payload: {
-        userNotification: this.commonService.generateNotification(
-          user,
-          notificationType,
-          'username',
-        ),
+  private async checkUsernameUniqueness(username: string): Promise<void> {
+    const count = await this.usersRepository.count({ username });
+
+    if (count > 0) {
+      throw new ConflictException('Username already in use');
+    }
+  }
+
+  private throwUnauthorizedException(
+    user: undefined | null | UserEntity,
+  ): void {
+    if (isUndefined(user) || isNull(user)) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+  }
+
+  private async checkEmailUniqueness(email: string): Promise<void> {
+    const count = await this.usersRepository.count({ email });
+
+    if (count > 0) {
+      throw new ConflictException('Email already in use');
+    }
+  }
+
+  /**
+   * Generates a unique username using a point slug based on the name
+   * and if it's already in use, it adds the usernames count to the end
+   */
+  private async generateUsername(name: string): Promise<string> {
+    const pointSlug = this.commonService.generatePointSlug(name);
+    const count = await this.usersRepository.count({
+      username: {
+        $like: `${pointSlug}%`,
       },
     });
+
+    if (count > 0) {
+      return `${pointSlug}${count}`;
+    }
+
+    return pointSlug;
   }
 }

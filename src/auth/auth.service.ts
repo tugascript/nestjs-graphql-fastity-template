@@ -1,6 +1,21 @@
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
-  CACHE_MANAGER,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -8,445 +23,245 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { compare, hash } from 'bcrypt';
 import { Cache } from 'cache-manager';
+import { isEmail } from 'class-validator';
+import { randomBytes } from 'crypto';
 import dayjs from 'dayjs';
-import { FastifyReply, FastifyRequest } from 'fastify';
-import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
+import { v4 } from 'uuid';
 import { CommonService } from '../common/common.service';
+import { SLUG_REGEX } from '../common/constants/regex';
 import { LocalMessageType } from '../common/entities/gql/message.type';
-import { IJwt, ISingleJwt } from '../config/interfaces/jwt.interface';
+import { IUnion } from '../common/interfaces/union.interface';
 import { IWsCtx } from '../config/interfaces/ws-ctx.interface';
+import { isNull, isUndefined } from '../config/utils/validation.util';
 import { EmailService } from '../email/email.service';
+import { TokenTypeEnum } from '../jwt/enums/token-type.enum';
+import { IAccessToken } from '../jwt/interfaces/access-token.interface';
+import { IEmailToken } from '../jwt/interfaces/email-token.interface';
+import { IRefreshToken } from '../jwt/interfaces/refresh-token.interface';
+import { JwtService } from '../jwt/jwt.service';
 import { UserEntity } from '../users/entities/user.entity';
+import { OAuthProvidersEnum } from '../users/enums/oauth-providers.enum';
 import { OnlineStatusEnum } from '../users/enums/online-status.enum';
+import { ICredentials } from '../users/interfaces/credentials.interface';
 import { UsersService } from '../users/users.service';
-import { ChangeEmailDto } from './dtos/change-email.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
-import { ConfirmLoginDto } from './dtos/confirm-login.dto';
-import { LoginDto } from './dtos/login.dto';
-import { RegisterDto } from './dtos/register.dto';
-import { ResetEmailDto } from './dtos/reset-email.dto';
+import { EmailDto } from './dtos/email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
-import { generateToken, verifyToken } from './helpers/async-jwt';
-import {
-  IAccessPayload,
-  IAccessPayloadResponse,
-} from './interfaces/access-payload.interface';
+import { SignInDto } from './dtos/sign-in.dto';
+import { SignUpDto } from './dtos/sign-up.dto';
 import { IAuthResult } from './interfaces/auth-result.interface';
-import { ISessionsData } from './interfaces/sessions-data.interface';
-import {
-  ITokenPayload,
-  ITokenPayloadResponse,
-} from './interfaces/token-payload.interface';
+import { ISessionsData } from './interfaces/session-data.interface';
 
 @Injectable()
 export class AuthService {
-  private readonly cookieName =
-    this.configService.get<string>('REFRESH_COOKIE');
-  private readonly url = this.configService.get<string>('url');
-  private readonly authNamespace = this.configService.get<string>('AUTH_UUID');
-  private readonly wsNamespace = this.configService.get<string>('WS_UUID');
-  private readonly testing = this.configService.get<boolean>('testing');
-  private readonly refreshTime =
-    this.configService.get<number>('jwt.refresh.time');
-  private readonly accessTime =
-    this.configService.get<number>('jwt.access.time');
-  private readonly sessionTime = this.configService.get<number>('sessionTime');
+  private readonly sessionTime: number;
+  private readonly twoFactorTime: number;
+  private readonly accessTime: number;
+  private readonly twoFactorPrefix = 'two_factor';
+  private readonly blacklistPrefix = 'blacklist';
+  private readonly sessionsPrefix = 'sessions';
 
   constructor(
-    private readonly usersService: UsersService,
-    private readonly configService: ConfigService,
-    private readonly emailService: EmailService,
-    private readonly commonService: CommonService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-  ) {}
+    private readonly commonService: CommonService,
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService,
+  ) {
+    this.sessionTime = this.configService.get<number>('sessionTime');
+    this.twoFactorTime = this.configService.get<number>('twoFactorTime');
+    this.accessTime = this.configService.get<number>('jwt.access.time');
+  }
 
-  //____________________ STATIC ____________________
-
-  /**
-   * Generate Access Code
-   *
-   * Generates a 6 char long number string for two-factor auth
-   */
   private static generateAccessCode(): string {
-    const nums = '0123456789';
-
-    let code = '';
-    while (code.length < 6) {
-      const i = Math.floor(Math.random() * nums.length);
-      code += nums[i];
-    }
-
-    return code;
+    return randomBytes(3).toString('hex').toUpperCase();
   }
 
-  //____________________ MUTATIONS ____________________
-
-  /**
-   * Register User
-   *
-   * Takes the register input, creates a new user in the db
-   * and asynchronously sends a confirmation email
-   */
-  public async registerUser(input: RegisterDto): Promise<LocalMessageType> {
-    const user = await this.usersService.createUser(input);
-    this.sendConfirmationEmail(user);
-    return new LocalMessageType('User registered successfully');
+  public async signUp(
+    dto: SignUpDto,
+    domain?: string,
+  ): Promise<LocalMessageType> {
+    const { name, email, password1, password2 } = dto;
+    this.comparePasswords(password1, password2);
+    const user = await this.usersService.create(
+      OAuthProvidersEnum.LOCAL,
+      email,
+      name,
+      password1,
+    );
+    const confirmationToken = await this.jwtService.generateToken(
+      user,
+      TokenTypeEnum.CONFIRMATION,
+      domain,
+    );
+    this.emailService.sendConfirmationEmail(user, confirmationToken);
+    return new LocalMessageType('Registration successful');
   }
 
-  /**
-   * Confirm Email
-   *
-   * Takes a confirmation token, confirms and updates the user
-   */
   public async confirmEmail(
-    res: FastifyReply,
-    { confirmationToken }: ConfirmEmailDto,
+    dto: ConfirmEmailDto,
+    domain?: string,
   ): Promise<IAuthResult> {
-    const payload = (await this.verifyAuthToken(
+    const { confirmationToken } = dto;
+    const { id, version } = await this.jwtService.verifyToken<IEmailToken>(
       confirmationToken,
-      'confirmation',
-    )) as ITokenPayloadResponse;
-    const user = await this.usersService.getUserByPayload(payload);
-
-    if (user.confirmed)
-      throw new BadRequestException('Email already confirmed');
-
-    user.confirmed = true;
-    user.credentials.updateVersion();
-    user.lastLogin = new Date();
-    await this.usersService.saveUserToDb(user);
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-    return { accessToken };
+      TokenTypeEnum.CONFIRMATION,
+    );
+    const user = await this.usersService.confirmEmail(id, version);
+    return this.generateAuthResult(user, domain);
   }
 
-  /**
-   * Login User
-   *
-   * Takes the login input, if two-factor auth is true: it caches a new access code and
-   * asynchronously sends it by email. If false, it sends an auth type
-   */
-  public async loginUser(
-    res: FastifyReply,
-    { email, password }: LoginDto,
-  ): Promise<IAuthResult | LocalMessageType> {
-    email = email.toLowerCase();
-    const user = await this.usersService.getUserForAuth(email);
-    const currentPassword = user.password;
-    const { lastPassword, updatedAt } = user.credentials;
-    const now = dayjs();
-    const time = dayjs.unix(updatedAt);
-    const months = now.diff(time, 'month');
+  public async signIn(
+    dto: SignInDto,
+    domain?: string,
+  ): Promise<
+    IUnion<'auth', IAuthResult> | IUnion<'message', LocalMessageType>
+  > {
+    const { emailOrUsername, password } = dto;
+    const user = await this.userByEmailOrUsername(emailOrUsername);
 
-    if (!(await compare(password, currentPassword))) {
-      // To check for passwords changes, based on facebook auth
-      if (lastPassword.length > 0 && !(await compare(password, lastPassword))) {
-        let message = 'You changed your password ';
-
-        if (months > 0) {
-          message += months + ' months ago.';
-        } else {
-          const days = now.diff(time, 'day');
-
-          if (days > 0) {
-            message += days + ' days ago.';
-          } else {
-            const hours = now.diff(time, 'hour');
-
-            if (hours > 0) {
-              message += hours + ' hours ago.';
-            } else {
-              message += 'recently.';
-            }
-          }
-        }
-
-        throw new UnauthorizedException(message);
-      }
-
-      throw new UnauthorizedException('Invalid credentials');
+    if (!(await compare(password, user.password))) {
+      await this.checkLastPassword(user.credentials, password);
     }
-
     if (!user.confirmed) {
-      this.sendConfirmationEmail(user);
+      const confirmationToken = await this.jwtService.generateToken(
+        user,
+        TokenTypeEnum.CONFIRMATION,
+        domain,
+      );
+      this.emailService.sendConfirmationEmail(user, confirmationToken);
       throw new UnauthorizedException(
-        'Please confirm your account. A new email has been sent',
+        'Please confirm your email, a new email has been sent',
       );
     }
-
     if (user.twoFactor) {
-      const code = AuthService.generateAccessCode();
-
-      await this.commonService.throwInternalError(
-        this.cacheManager.set(
-          uuidV5(email, this.authNamespace),
-          await hash(code, 5),
-        ),
-      );
-
-      this.emailService.sendAccessCode(user, code);
-
-      return new LocalMessageType('Login confirmation code sent');
+      return {
+        title: 'message',
+        value: await this.saveTwoFactorCode(user),
+      };
     }
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-
-    user.lastLogin = new Date();
-    await this.usersService.saveUserToDb(user);
-
+    await this.usersService.updateInternal(user, { lastLogin: new Date() });
     return {
-      accessToken,
-      message:
-        months >= 6
-          ? new LocalMessageType('Please confirm your credentials')
-          : undefined,
+      title: 'auth',
+      value: await this.generateAuthResult(user, domain),
     };
   }
 
-  /**
-   * Confirm Credentials
-   *
-   * Confirms credentials update by user
-   */
-  public async confirmCredentials(userId: number): Promise<LocalMessageType> {
-    const user = await this.usersService.userById(userId);
-
-    user.credentials.updatedAt = dayjs().unix();
-    await this.usersService.saveUserToDb(user);
-
-    return new LocalMessageType('Authentication credentials confirmed');
-  }
-
-  /**
-   * Confirm Login
-   *
-   * Takes the confirmation login input, checks the access code
-   * and logins the user
-   */
-  public async confirmLogin(
-    res: FastifyReply,
-    { email, accessCode }: ConfirmLoginDto,
+  public async refreshTokenAccess(
+    refreshToken: string,
+    domain?: string,
   ): Promise<IAuthResult> {
-    email = email.toLowerCase();
-    const hashedCode = await this.commonService.throwInternalError(
-      this.cacheManager.get<string>(uuidV5(email, this.authNamespace)),
-    );
-
-    if (!hashedCode || !(await compare(accessCode, hashedCode)))
-      throw new UnauthorizedException('Access code is invalid or has expired');
-
-    const user = await this.usersService.getUserForAuth(email);
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-
-    user.lastLogin = new Date();
-    await this.usersService.saveUserToDb(user);
-
-    return { accessToken };
-  }
-
-  /**
-   * Logout User
-   *
-   * Removes the refresh token from the cookies
-   */
-  public logoutUser(res: FastifyReply): LocalMessageType {
-    res.clearCookie(this.cookieName, { path: '/api/auth/refresh-access' });
-    return new LocalMessageType('Logout Successfully');
-  }
-
-  /**
-   * Refresh Access Token
-   *
-   * Takes the request and response, and generates new auth tokens
-   * based on the current refresh token.
-   *
-   * It generates both tokens so the user can stay logged in indefinitely
-   */
-  public async refreshAccessToken(
-    req: FastifyRequest,
-    res: FastifyReply,
-  ): Promise<IAuthResult> {
-    const token = req.cookies[this.cookieName];
-
-    if (!token) throw new UnauthorizedException('Invalid refresh token');
-
-    const { valid, value } = res.unsignCookie(token);
-
-    if (!valid) throw new UnauthorizedException('Invalid refresh token');
-
-    const payload = (await this.verifyAuthToken(
-      value,
-      'refresh',
-    )) as ITokenPayloadResponse;
-    const user = await this.usersService.getUncheckUserById(payload.id);
-
-    if (user.credentials.version !== payload.count) {
-      this.logoutUser(res);
-      throw new UnauthorizedException('Token is invalid or expired');
-    }
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-
-    return { accessToken };
-  }
-
-  /**
-   * Send Reset Password Email
-   *
-   * Takes a user email and sends a reset password email
-   */
-  public async sendResetPasswordEmail({
-    email,
-  }: ResetEmailDto): Promise<LocalMessageType> {
-    email = email.toLowerCase();
-    const user = await this.usersService.getUncheckUser(email);
-
-    if (user) {
-      const resetToken = await this.generateAuthToken(
-        { id: user.id, count: user.credentials.version },
-        'resetPassword',
+    const { id, version, tokenId } =
+      await this.jwtService.verifyToken<IRefreshToken>(
+        refreshToken,
+        TokenTypeEnum.REFRESH,
       );
-      const url = `${this.url}/reset-password/${resetToken}/`;
-      this.emailService.sendPasswordResetEmail(user, url);
-    }
-
-    return new LocalMessageType('Password reset email sent');
+    await this.checkIfTokenIsBlacklisted(id, tokenId);
+    const user = await this.usersService.findOneByCredentials(id, version);
+    return this.generateAuthResult(user, domain, tokenId);
   }
 
-  /**
-   * Reset Password
-   *
-   * Resets password given a reset password jwt token
-   */
-  public async resetPassword({
-    resetToken,
-    password1,
-    password2,
-  }: ResetPasswordDto): Promise<LocalMessageType> {
-    const payload = (await this.verifyAuthToken(
+  public async updateTwoFactor(
+    userId: number,
+    twoFactor: boolean,
+    refreshToken: string,
+    domain?: string,
+  ): Promise<IAuthResult> {
+    const user = await this.usersService.findOneById(userId);
+
+    if (user.twoFactor === twoFactor) {
+      const { tokenId } = await this.jwtService.verifyToken<IRefreshToken>(
+        refreshToken,
+        TokenTypeEnum.REFRESH,
+      );
+      return this.generateAuthResult(user, domain, tokenId);
+    }
+    if (twoFactor) {
+      user.credentials.updateVersion();
+    }
+
+    await this.usersService.updateInternal(user, { twoFactor });
+    return this.generateAuthResult(user, domain);
+  }
+
+  public async logout(refreshToken: string): Promise<LocalMessageType> {
+    const { id, tokenId, exp } =
+      await this.jwtService.verifyToken<IRefreshToken>(
+        refreshToken,
+        TokenTypeEnum.REFRESH,
+      );
+    await this.blacklistToken(id, tokenId, exp);
+    return new LocalMessageType('Logout successful');
+  }
+
+  public async resetPasswordEmail(
+    dto: EmailDto,
+    domain?: string,
+  ): Promise<LocalMessageType> {
+    const user = await this.usersService.uncheckedUserByEmail(dto.email);
+
+    if (!isUndefined(user) && !isNull(user)) {
+      const resetToken = await this.jwtService.generateToken(
+        user,
+        TokenTypeEnum.RESET_PASSWORD,
+        domain,
+      );
+      this.emailService.sendResetPasswordEmail(user, resetToken);
+    }
+
+    return new LocalMessageType('Reset password email sent');
+  }
+
+  public async resetPassword(dto: ResetPasswordDto): Promise<LocalMessageType> {
+    const { password1, password2, resetToken } = dto;
+    const { id, version } = await this.jwtService.verifyToken<IEmailToken>(
       resetToken,
-      'resetPassword',
-    )) as ITokenPayloadResponse;
-
-    if (password1 !== password2)
-      throw new BadRequestException('Passwords do not match');
-
-    const user = await this.usersService.getUserByPayload(payload);
-    user.credentials.updatePassword(user.password);
-    user.password = await hash(password1, 10);
-    await this.usersService.saveUserToDb(user);
-
-    return new LocalMessageType('Password reseted successfully');
-  }
-
-  /**
-   * Change Two-Factor Auth
-   *
-   * Activates or deactivates two-factor auth
-   */
-  public async changeTwoFactorAuth(userId: number): Promise<LocalMessageType> {
-    const user = await this.usersService.userById(userId);
-
-    user.twoFactor = !user.twoFactor;
-    await this.usersService.saveUserToDb(user);
-
-    const status = user.twoFactor ? 'activated' : 'deactivated';
-    return new LocalMessageType(
-      `Two factor authentication ${status} successfully`,
+      TokenTypeEnum.RESET_PASSWORD,
     );
+    this.comparePasswords(password1, password2);
+    await this.usersService.resetPassword(id, version, password1);
+    return new LocalMessageType('Password reset successfully');
   }
 
-  /**
-   * Update Email
-   *
-   * Change current user email
-   */
-  public async updateEmail(
-    res: FastifyReply,
-    userId: number,
-    { email, password }: ChangeEmailDto,
-  ): Promise<IAuthResult> {
-    email = email.toLowerCase();
-    const user = await this.usersService.userById(userId);
-
-    if (!(await compare(password, user.password)))
-      throw new BadRequestException('Wrong password');
-
-    if (email === user.email)
-      throw new BadRequestException(
-        'The new email has to differ from the old one',
-      );
-    user.email = email;
-    user.credentials.updateVersion();
-    await this.usersService.saveUserToDb(user);
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-
-    return { accessToken };
-  }
-
-  //____________________ WebSocket Auth ____________________
-
-  /**
-   * Update Password
-   *
-   * Change current user password
-   */
   public async updatePassword(
-    res: FastifyReply,
     userId: number,
-    { password, password1, password2 }: ChangePasswordDto,
+    dto: ChangePasswordDto,
+    domain?: string,
   ): Promise<IAuthResult> {
-    const user = await this.usersService.userById(userId);
-
-    if (!(await compare(password, user.password)))
-      throw new BadRequestException('Wrong password');
-
-    if (password == password1)
-      throw new BadRequestException(
-        'The new password has to differ from the old one',
-      );
-
-    if (password1 !== password2)
-      throw new BadRequestException('Passwords do not match');
-
-    user.credentials.updatePassword(user.password);
-    user.password = await hash(password1, 10);
-    await this.usersService.saveUserToDb(user);
-
-    const [accessToken, refreshToken] = await this.generateAuthTokens(user);
-    this.saveRefreshCookie(res, refreshToken);
-
-    return { accessToken };
+    const { password1, password2, password } = dto;
+    this.comparePasswords(password1, password2);
+    const user = await this.usersService.updatePassword(
+      userId,
+      password,
+      password1,
+    );
+    const [accessToken, refreshToken] =
+      await this.jwtService.generateAuthTokens(user, domain);
+    return { user, accessToken, refreshToken };
   }
 
-  /**
-   * Generate Websocket Session
-   *
-   * Generates a session for a given user, saves it to the
-   * sessions redis cache and returns the current user and
-   * session id
-   */
   public async generateWsSession(
     accessToken: string,
   ): Promise<[number, string]> {
-    const { id } = await this.verifyAuthToken(accessToken, 'access');
-    const user = await this.usersService.userById(id);
-    const userUuid = uuidV5(user.id.toString(), this.wsNamespace);
+    const { id } = await this.jwtService.verifyToken<IAccessToken>(
+      accessToken,
+      TokenTypeEnum.ACCESS,
+    );
+    const user = await this.usersService.findOneById(id);
+    const sessionKey = `${this.sessionsPrefix}:${id}`;
     const count = user.credentials.version;
     let sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
+      this.cacheManager.get<ISessionsData>(sessionKey),
     );
 
-    if (!sessionData || sessionData.count != count) {
+    if (
+      isUndefined(sessionData) ||
+      isNull(sessionData) ||
+      sessionData.count !== count
+    ) {
       sessionData = {
         sessions: {},
         count,
@@ -454,188 +269,209 @@ export class AuthService {
       user.onlineStatus = user.defaultStatus;
     }
 
-    const sessionId = uuidV4();
+    const sessionId = v4();
     sessionData.sessions[sessionId] = dayjs().unix();
-    await this.saveSessionData(userUuid, sessionData);
-
+    await this.saveSessionData(sessionKey, sessionData);
     return [id, sessionId];
   }
 
-  /**
-   * Refresh User Session
-   *
-   * Checks if user session is valid for websocket auth
-   */
-  public async refreshUserSession({
-    userId,
-    sessionId,
-  }: IWsCtx): Promise<boolean> {
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
-    const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
-    );
-
-    if (!sessionData) return false;
-
-    const session = sessionData.sessions[sessionId];
-
-    if (!session) return false;
-
-    const now = dayjs().unix();
-
-    if (now - session > this.accessTime) {
-      const user = await this.usersService.getUncheckUserById(userId);
-      if (!user) return false;
-
-      if (user.credentials.version !== sessionData.count) {
-        await this.commonService.throwInternalError(
-          this.cacheManager.del(userUuid),
-        );
-        return false;
-      }
-
-      sessionData.sessions[sessionId] = now;
-      await this.saveSessionData(userUuid, sessionData);
-    }
-
-    return true;
-  }
-
-  //____________________ OTHER METHODS ____________________
-
-  /**
-   * Close User Session
-   *
-   * Removes websocket session from cache, if it's the only
-   * one, makes the user online status offline
-   */
-  public async closeUserSession({ userId, sessionId }: IWsCtx): Promise<void> {
-    const userUuid = uuidV5(userId.toString(), this.wsNamespace);
-    const sessionData = await this.commonService.throwInternalError(
-      this.cacheManager.get<ISessionsData>(userUuid),
-    );
-
-    if (!sessionData.sessions[sessionId])
-      throw new UnauthorizedException('Invalid session');
-
+  public async closeUserSession(ctx: IWsCtx): Promise<void> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
+    const sessionData = await this.getSessionData(ctx);
     delete sessionData.sessions[sessionId];
 
     if (Object.keys(sessionData.sessions).length === 0) {
       await this.commonService.throwInternalError(
-        this.cacheManager.del(userUuid),
+        this.cacheManager.del(sessionKey),
       );
-      const user = await this.usersService.userById(userId);
-      user.lastOnline = new Date();
-      user.onlineStatus = OnlineStatusEnum.OFFLINE;
-      await this.usersService.saveUserToDb(user);
+      await this.makeUserOffline(userId);
       return;
     }
 
-    await this.saveSessionData(userUuid, sessionData);
+    await this.saveSessionData(sessionKey, sessionData);
   }
 
-  //____________________ PRIVATE METHODS ____________________
+  public async refreshUserSession(ctx: IWsCtx): Promise<void> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
+    const sessionData = await this.getSessionData(ctx);
+    const now = dayjs().unix();
 
-  /**
-   * Verify Auth Token
-   *
-   * A generic jwt verifier that verifies all token needed for auth
-   */
-  public async verifyAuthToken(
-    token: string,
-    type: keyof IJwt,
-  ): Promise<ITokenPayloadResponse | IAccessPayloadResponse> {
-    const secret = this.configService.get<string>(`jwt.${type}.secret`);
-
-    try {
-      return await verifyToken(token, secret);
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Token has expired');
-      } else {
-        throw new UnauthorizedException(error.message);
-      }
+    if (now - sessionData.sessions[sessionId] < this.accessTime) {
+      return;
     }
+
+    const user = await this.usersService.findOneById(userId);
+
+    if (user.credentials.version !== sessionData.count) {
+      await this.commonService.throwInternalError(
+        this.cacheManager.del(sessionKey),
+      );
+      await this.makeUserOffline(userId);
+      throw new UnauthorizedException('Session has expired');
+    }
+
+    sessionData.sessions[sessionId] = now;
+    await this.saveSessionData(sessionKey, sessionData);
   }
 
-  /**
-   * Send Confirmation Email
-   *
-   * Sends an email for the user to confirm
-   * his account after registration
-   */
-  private async sendConfirmationEmail(user: UserEntity): Promise<string> {
-    const emailToken = await this.generateAuthToken(
-      { id: user.id, count: user.credentials.version },
-      'confirmation',
-    );
-    const url = `${this.url}/confirm-email/${emailToken}/`;
-    await this.emailService.sendConfirmationEmail(user, url);
-    return emailToken;
+  private async generateAuthResult(
+    user: UserEntity,
+    domain?: string,
+    tokenId?: string,
+  ): Promise<IAuthResult> {
+    const [accessToken, refreshToken] =
+      await this.jwtService.generateAuthTokens(user, domain, tokenId);
+    return { user, accessToken, refreshToken };
   }
 
-  /**
-   * Generate Auth Tokens
-   *
-   * Generates an array with both the access and
-   * refresh token.
-   *
-   * This function takes advantage of Promise.all.
-   */
-  private async generateAuthTokens({
-    id,
-    credentials,
-  }: UserEntity): Promise<[string, string]> {
-    return Promise.all([
-      this.generateAuthToken({ id }, 'access'),
-      this.generateAuthToken({ id, count: credentials.version }, 'refresh'),
-    ]);
-  }
-
-  /**
-   * Generate Jwt Token
-   *
-   * A generic jwt generator that generates all tokens needed
-   * for auth (access, refresh, confirmation & resetPassword)
-   */
-  private async generateAuthToken(
-    payload: ITokenPayload | IAccessPayload,
-    type: keyof IJwt,
-  ): Promise<string> {
-    const { secret, time } = this.configService.get<ISingleJwt>(`jwt.${type}`);
-
-    return await this.commonService.throwInternalError(
-      generateToken(payload, secret, time),
-    );
-  }
-
-  /**
-   * Save Refresh Cookie
-   *
-   * Saves the refresh token as a http only cookie to
-   * be used for refreshing the access token
-   */
-  private saveRefreshCookie(res: FastifyReply, token: string): void {
-    res.cookie(this.cookieName, token, {
-      secure: !this.testing,
-      httpOnly: true,
-      signed: true,
-      path: '/api/auth/refresh-access',
-      expires: new Date(Date.now() + this.refreshTime * 1000),
+  private async makeUserOffline(userId: number): Promise<void> {
+    const user = await this.usersService.findOneById(userId);
+    await this.usersService.updateInternal(user, {
+      lastOnline: new Date(),
+      onlineStatus: OnlineStatusEnum.OFFLINE,
     });
   }
 
-  /**
-   * Save Session Data
-   *
-   * Saves session data in cache
-   */
+  private async getSessionData(ctx: IWsCtx): Promise<ISessionsData> {
+    const { userId, sessionId } = ctx;
+    const sessionKey = `${this.sessionsPrefix}:${userId}`;
+    const sessionData = await this.commonService.throwInternalError(
+      this.cacheManager.get<ISessionsData>(sessionKey),
+    );
+
+    if (
+      isUndefined(sessionData) ||
+      isNull(sessionData) ||
+      isUndefined(sessionData.sessions[sessionId]) ||
+      isNull(sessionData.sessions[sessionId])
+    ) {
+      await this.makeUserOffline(userId);
+      throw new UnauthorizedException('Invalid session');
+    }
+
+    return sessionData;
+  }
+
+  private async checkLastPassword(
+    credentials: ICredentials,
+    password: string,
+  ): Promise<void> {
+    const { lastPassword, passwordUpdatedAt } = credentials;
+
+    if (lastPassword.length === 0 || !(await compare(password, lastPassword))) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const now = dayjs();
+    const time = dayjs.unix(passwordUpdatedAt);
+    const months = now.diff(time, 'month');
+    const message = 'You changed your password ';
+
+    if (months > 0) {
+      throw new UnauthorizedException(
+        message + months + (months > 1 ? ' months ago' : ' month ago'),
+      );
+    }
+
+    const days = now.diff(time, 'day');
+
+    if (days > 0) {
+      throw new UnauthorizedException(
+        message + days + (days > 1 ? ' days ago' : ' day ago'),
+      );
+    }
+
+    const hours = now.diff(time, 'hour');
+
+    if (hours > 0) {
+      throw new UnauthorizedException(
+        message + hours + (hours > 1 ? ' hours ago' : ' hour ago'),
+      );
+    }
+
+    throw new UnauthorizedException(message + 'recently');
+  }
+
+  private async checkIfTokenIsBlacklisted(
+    userId: number,
+    tokenId: string,
+  ): Promise<void> {
+    const time = await this.cacheManager.get<number>(
+      `blacklist:${userId}:${tokenId}`,
+    );
+
+    if (!isUndefined(time) && !isNull(time)) {
+      throw new UnauthorizedException('Invalid token');
+    }
+  }
+
+  private async blacklistToken(
+    userId: number,
+    tokenId: string,
+    exp: number,
+  ): Promise<void> {
+    const now = dayjs().unix();
+    const ttl = (exp - now) * 1000;
+
+    if (ttl > 0) {
+      await this.commonService.throwInternalError(
+        this.cacheManager.set(
+          `${this.blacklistPrefix}:${userId}:${tokenId}`,
+          now,
+          ttl,
+        ),
+      );
+    }
+  }
+
+  private comparePasswords(password1: string, password2: string): void {
+    if (password1 !== password2) {
+      throw new BadRequestException('Passwords do not match');
+    }
+  }
+
+  private async userByEmailOrUsername(
+    emailOrUsername: string,
+  ): Promise<UserEntity> {
+    if (emailOrUsername.includes('@')) {
+      if (!isEmail(emailOrUsername)) {
+        throw new BadRequestException('Invalid email');
+      }
+
+      return this.usersService.findOneByEmail(emailOrUsername);
+    }
+
+    if (
+      emailOrUsername.length < 3 ||
+      emailOrUsername.length > 106 ||
+      !SLUG_REGEX.test(emailOrUsername)
+    ) {
+      throw new BadRequestException('Invalid username');
+    }
+
+    return this.usersService.findOneByUsername(emailOrUsername, true);
+  }
+
+  private async saveTwoFactorCode(user: UserEntity): Promise<LocalMessageType> {
+    const code = AuthService.generateAccessCode();
+    await this.commonService.throwInternalError(
+      this.cacheManager.set(
+        `${this.twoFactorPrefix}:${user.email}`,
+        await hash(code, 5),
+      ),
+    );
+    this.emailService.sendAccessCode(user, code);
+    return new LocalMessageType('Two factor code sent');
+  }
+
   private async saveSessionData(
-    userUuid: string,
+    sessionKey: string,
     sessionData: ISessionsData,
   ): Promise<void> {
     await this.commonService.throwInternalError(
-      this.cacheManager.set(userUuid, sessionData, this.sessionTime),
+      this.cacheManager.set(sessionKey, sessionData, this.sessionTime * 1000),
     );
   }
 }

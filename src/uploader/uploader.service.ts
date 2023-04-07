@@ -1,3 +1,18 @@
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
 import {
   DeleteObjectCommand,
   PutObjectCommand,
@@ -16,16 +31,18 @@ import { MAX_WIDTH, QUALITY_ARRAY } from './utils/uploader.constants';
 
 @Injectable()
 export class UploaderService {
-  private readonly client = new S3Client(
-    this.configService.get<S3ClientConfig>('bucketConfig'),
-  );
-  private readonly bucketData =
-    this.configService.get<IBucketData>('bucketData');
+  private readonly client: S3Client;
+  private readonly bucketData: IBucketData;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly commonService: CommonService,
-  ) {}
+  ) {
+    this.client = new S3Client(
+      this.configService.get<S3ClientConfig>('bucketConfig'),
+    );
+    this.bucketData = this.configService.get<IBucketData>('bucketData');
+  }
 
   private static validateImage(mimetype: string): string | false {
     const val = mimetype.split('/');

@@ -1,11 +1,37 @@
-import { IBase } from '../../common/interfaces/base.interface';
-import { OnlineStatusEnum } from '../enums/online-status.enum';
+/*
+ Free and Open Source - GNU GPLv3
 
-export interface IUser extends IBase {
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
+import { OnlineStatusEnum } from '../enums/online-status.enum';
+import { ICredentials } from './credentials.interface';
+import { Collection } from '@mikro-orm/core';
+
+export interface IUser {
+  id: number;
+  authProviders: Collection<any, any>;
   name: string;
   username: string;
   email: string;
   picture?: string;
+  password: string;
+  confirmed: boolean;
+  twoFactor: boolean;
+  credentials: ICredentials;
   onlineStatus: OnlineStatusEnum;
+  defaultStatus: OnlineStatusEnum;
+  createdAt: Date;
+  updatedAt: Date;
+  lastLogin: Date;
   lastOnline: Date;
 }

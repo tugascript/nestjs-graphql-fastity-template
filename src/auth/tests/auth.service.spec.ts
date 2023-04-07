@@ -1,62 +1,58 @@
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
 import { faker } from '@faker-js/faker';
+import { MikroORM } from '@mikro-orm/core';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
-import { CACHE_MANAGER, CacheModule } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { CACHE_MANAGER, CacheModule } from '@nestjs/cache-manager';
+import { ConfigModule } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { compare, hash } from 'bcrypt';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { Cache } from 'cache-manager';
-import dayjs from 'dayjs';
-import { v4, v5 } from 'uuid';
+import { isJWT, isUUID } from 'class-validator';
 import { CommonModule } from '../../common/common.module';
 import { CommonService } from '../../common/common.service';
-import { LocalMessageType } from '../../common/entities/gql/message.type';
-import { config } from '../../config/config';
-import { IJwt, ISingleJwt } from '../../config/interfaces/jwt.interface';
+import { config } from '../../config';
 import { MikroOrmConfig } from '../../config/mikroorm.config';
-import { validationSchema } from '../../config/validation';
+import { ThrottlerConfig } from '../../config/throttler.config';
+import { validationSchema } from '../../config/validation.config';
 import { EmailModule } from '../../email/email.module';
+import { EmailService } from '../../email/email.service';
+import { TokenTypeEnum } from '../../jwt/enums/token-type.enum';
+import { IRefreshToken } from '../../jwt/interfaces/refresh-token.interface';
+import { JwtModule } from '../../jwt/jwt.module';
+import { JwtService } from '../../jwt/jwt.service';
+import { UserEntity } from '../../users/entities/user.entity';
+import { IUser } from '../../users/interfaces/user.interface';
 import { UsersModule } from '../../users/users.module';
 import { UsersService } from '../../users/users.service';
 import { AuthService } from '../auth.service';
-import { generateToken, verifyToken } from '../helpers/async-jwt';
-import {
-  IAccessPayload,
-  IAccessPayloadResponse,
-} from '../interfaces/access-payload.interface';
-import { IAuthResult } from '../interfaces/auth-result.interface';
-import { ISessionsData } from '../interfaces/sessions-data.interface';
-import {
-  ITokenPayload,
-  ITokenPayloadResponse,
-} from '../interfaces/token-payload.interface';
 
-class ResponseMock {
-  public cookies = '';
-  public options: any;
-
-  public cookie(name: string, token: string, options?: any) {
-    this.cookies = `${name}=${token}`;
-    if (options) this.options = options;
-  }
-}
-
-const NAME = faker.name.fullName();
-const EMAIL = faker.internet.email();
-const NEW_EMAIL = faker.internet.email();
-const PASSWORD = 'Ab123456';
-const NEW_PASSWORD = 'Ab1234567';
 describe('AuthService', () => {
-  let authService: AuthService,
+  let module: TestingModule,
+    authService: AuthService,
+    emailService: EmailService,
     usersService: UsersService,
-    configService: ConfigService,
+    jwtService: JwtService,
     commonService: CommonService,
-    cacheManager: Cache;
+    cacheManager: Cache,
+    orm: MikroORM;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
+  beforeAll(async () => {
+    module = await Test.createTestingModule({
       imports: [
-        UsersModule,
-        EmailModule,
         ConfigModule.forRoot({
           isGlobal: true,
           validationSchema,
@@ -64,444 +60,439 @@ describe('AuthService', () => {
         }),
         CacheModule.register({
           isGlobal: true,
-          ttl: parseInt(process.env.REDIS_CACHE_TTL, 10),
+          ttl: parseInt(process.env.JWT_REFRESH_TIME, 10),
         }),
         MikroOrmModule.forRootAsync({
           imports: [ConfigModule],
           useClass: MikroOrmConfig,
         }),
         CommonModule,
+        UsersModule,
+        JwtModule,
+        EmailModule,
+        ThrottlerModule.forRootAsync({
+          imports: [ConfigModule],
+          useClass: ThrottlerConfig,
+        }),
       ],
-      providers: [
-        AuthService,
-        {
-          provide: 'CommonModule',
-          useClass: CommonModule,
-        },
-      ],
+      providers: [AuthService, CommonModule],
     }).compile();
 
     authService = module.get<AuthService>(AuthService);
+    emailService = module.get<EmailService>(EmailService);
     usersService = module.get<UsersService>(UsersService);
-    configService = module.get<ConfigService>(ConfigService);
+    jwtService = module.get<JwtService>(JwtService);
     commonService = module.get<CommonService>(CommonService);
     cacheManager = module.get<Cache>(CACHE_MANAGER);
+    orm = module.get<MikroORM>(MikroORM);
+    await orm.getSchemaGenerator().createSchema();
+
+    jest.spyOn(emailService, 'sendEmail').mockImplementation();
   });
 
-  // Response Mock
-  const response = new ResponseMock();
+  const name = faker.name.firstName();
+  const email = faker.internet.email().toLowerCase();
+  const password = faker.internet.password(10);
+  const baseUser = {
+    id: 1,
+    email,
+    credentials: {
+      version: 0,
+    },
+  } as IUser;
 
-  //____________________ Private Methods ____________________
+  it('should be defined', () => {
+    expect(module).toBeDefined();
+    expect(authService).toBeDefined();
+    expect(emailService).toBeDefined();
+    expect(usersService).toBeDefined();
+    expect(jwtService).toBeDefined();
+    expect(commonService).toBeDefined();
+    expect(cacheManager).toBeDefined();
+    expect(orm).toBeDefined();
+  });
 
-  const generateAuthToken = async (
-    payload: ITokenPayload | IAccessPayload,
-    type: keyof IJwt,
-  ): Promise<string> => {
-    const { secret, time } = configService.get<ISingleJwt>(`jwt.${type}`);
+  describe('sign up', () => {
+    it('should create a new user', async () => {
+      jest.spyOn(emailService, 'sendConfirmationEmail').mockImplementation();
 
-    return await commonService.throwInternalError(
-      generateToken(payload, secret, time),
-    );
-  };
+      const message = await authService.signUp({
+        name,
+        email,
+        password1: password,
+        password2: password,
+      });
+      expect(message.message).toStrictEqual('Registration successful');
+      expect(isUUID(message.id)).toBe(true);
+      expect(emailService.sendConfirmationEmail).toHaveBeenCalled();
+    });
 
-  const verifyAuthToken = async (
-    token: string,
-    type: keyof IJwt,
-  ): Promise<ITokenPayloadResponse | IAccessPayloadResponse> => {
-    const secret = configService.get<string>(`jwt.${type}.secret`);
-
-    try {
-      return await verifyToken(token, secret);
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        throw new Error('Token has expired');
-      } else {
-        throw new Error(error.message);
-      }
-    }
-  };
-
-  const generateAccessCode = (): string => {
-    const nums = '0123456789';
-
-    let code = '';
-    while (code.length < 6) {
-      const i = Math.floor(Math.random() * nums.length);
-      code += nums[i];
-    }
-
-    return code;
-  };
-
-  let userId: number;
-  describe('Sign Up', () => {
-    let confirmationToken: string;
-
-    it('registerUser', async () => {
+    it('should throw an error if the passwords do not match', async () => {
+      const password = faker.internet.password(10);
       await expect(
-        authService.registerUser({
-          name: NAME,
-          email: EMAIL,
-          password1: PASSWORD,
-          password2: NEW_PASSWORD,
+        authService.signUp({
+          name: faker.name.firstName(),
+          email: faker.internet.email(),
+          password1: password,
+          password2: password + '1',
         }),
       ).rejects.toThrowError('Passwords do not match');
-
-      jest
-        .spyOn(authService, 'registerUser')
-        .mockImplementationOnce(async (input) => {
-          const { id, credentials } = await usersService.createUser(input);
-          confirmationToken = await generateAuthToken(
-            {
-              id,
-              count: credentials.version,
-            },
-            'confirmation',
-          );
-          userId = id;
-          return new LocalMessageType('User registered successfully');
-        });
-
-      const message = await authService.registerUser({
-        name: NAME,
-        email: EMAIL,
-        password1: PASSWORD,
-        password2: PASSWORD,
-      });
-      expect(message).toBeInstanceOf(LocalMessageType);
-      expect(message.message).toBe('User registered successfully');
-      const { id } = await verifyAuthToken(confirmationToken, 'confirmation');
-      expect(id).toBe(userId);
-    });
-
-    it('confirmEmail', async () => {
-      const auth = await authService.confirmEmail(response as any, {
-        confirmationToken,
-      });
-      expect(auth.accessToken).toBeDefined();
-      const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      expect(userId).toBe(id);
     });
   });
 
-  describe('Sign In', () => {
-    it('loginUser w/o two factor', async () => {
-      await expect(
-        authService.loginUser(response as any, {
-          email: EMAIL,
-          password: NEW_PASSWORD,
-        }),
-      ).rejects.toThrowError();
-      await expect(
-        authService.loginUser(response as any, {
-          email: NEW_EMAIL,
-          password: PASSWORD,
-        }),
-      ).rejects.toThrowError();
+  describe('confirm email', () => {
+    let token: string;
 
-      const auth = (await authService.loginUser(response as any, {
-        email: EMAIL,
-        password: PASSWORD,
-      })) as IAuthResult;
-
-      expect(auth.accessToken).toBeDefined();
-      expect(auth.message).toBeUndefined();
-      const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      expect(userId).toBe(id);
-    });
-
-    it('loginUser w/ two factor', async () => {
-      const message1 = await authService.changeTwoFactorAuth(userId);
-      expect(message1).toBeInstanceOf(LocalMessageType);
-      expect(message1.message).toBe(
-        'Two factor authentication activated successfully',
+    it('should create a confirmation token', async () => {
+      token = await jwtService.generateToken(
+        baseUser,
+        TokenTypeEnum.CONFIRMATION,
       );
-      const { twoFactor } = await usersService.userById(userId);
-      expect(twoFactor).toBe(true);
+      expect(token).toBeDefined();
+      expect(isJWT(token)).toBe(true);
+    });
 
-      jest
-        .spyOn(authService, 'loginUser')
-        .mockImplementationOnce(async (_, { email, password }) => {
-          email = email.toLowerCase();
-          const user = await usersService.getUserForAuth(email);
-
-          if (!(await compare(password, user.password)))
-            throw new Error('Invalid credentials');
-
-          if (user.twoFactor) {
-            const code = generateAccessCode();
-
-            await commonService.throwInternalError(
-              cacheManager.set(
-                v5(email, configService.get<string>('AUTH_UUID')),
-                await hash(code, 5),
-              ),
-            );
-
-            return new LocalMessageType(code);
-          }
-        });
-
-      const message2 = (await authService.loginUser(response as any, {
-        email: EMAIL,
-        password: PASSWORD,
-      })) as LocalMessageType;
-      expect((message2 as unknown as IAuthResult).accessToken).toBeUndefined();
-      expect(message2).toBeInstanceOf(LocalMessageType);
-
-      await expect(
-        authService.confirmLogin(response as any, {
-          email: EMAIL,
-          accessCode: '000000',
-        }),
-      ).rejects.toThrowError();
-
-      const auth2 = await authService.confirmLogin(response as any, {
-        email: EMAIL,
-        accessCode: message2.message,
+    it('should confirm the email', async () => {
+      const result = await authService.confirmEmail({
+        confirmationToken: token,
       });
-      expect(auth2.accessToken).toBeDefined();
+      expect(result.user).toBeInstanceOf(UserEntity);
+      expect(result.user.confirmed).toBe(true);
+      expect(result.accessToken).toBeDefined();
+      expect(isJWT(result.accessToken)).toBe(true);
+      expect(result.refreshToken).toBeDefined();
+      expect(isJWT(result.refreshToken)).toBe(true);
+    });
 
-      const { id } = await verifyAuthToken(auth2.accessToken, 'access');
-      expect(userId).toBe(id);
+    it('should throw an error if the token is invalid', async () => {
+      await expect(
+        authService.confirmEmail({
+          confirmationToken: token + '1',
+        }),
+      ).rejects.toThrowError('Invalid token');
+    });
+
+    it('should throw an unauthorized error if token already used', async () => {
+      await expect(
+        authService.confirmEmail({
+          confirmationToken: token,
+        }),
+      ).rejects.toThrowError('Invalid credentials');
+    });
+
+    it('should throw a bad request error if user is already confirmed', async () => {
+      const newToken = await jwtService.generateToken(
+        {
+          ...baseUser,
+          credentials: {
+            ...baseUser.credentials,
+            version: 1,
+          },
+        },
+        TokenTypeEnum.CONFIRMATION,
+      );
+      await expect(
+        authService.confirmEmail({
+          confirmationToken: newToken,
+        }),
+      ).rejects.toThrowError('Email already confirmed');
     });
   });
 
-  describe('Password Reseting', () => {
-    let resetToken: string;
-    it('sendResetPasswordEmail && resetPassword', async () => {
-      let user = await usersService.getUncheckUser(NEW_EMAIL);
-      expect(user).toBeNull();
-      const message1 = await authService.sendResetPasswordEmail({
-        email: NEW_EMAIL,
+  describe('sign in', () => {
+    it('should sign in an user by email', async () => {
+      const { title, value } = await authService.signIn({
+        emailOrUsername: email,
+        password,
       });
-      expect(message1).toBeInstanceOf(LocalMessageType);
-      expect(message1.message).toBe('Password reset email sent');
+      expect(title).toStrictEqual('auth');
 
-      jest
-        .spyOn(authService, 'sendResetPasswordEmail')
-        .mockImplementation(async ({ email }) => {
-          const user = await usersService.getUncheckUser(email);
+      if (title === 'auth') {
+        expect(value.user).toBeInstanceOf(UserEntity);
+        expect(value.accessToken).toBeDefined();
+        expect(isJWT(value.accessToken)).toBe(true);
+        expect(value.refreshToken).toBeDefined();
+        expect(isJWT(value.refreshToken)).toBe(true);
+      }
+    });
 
-          if (user) {
-            resetToken = await generateAuthToken(
-              { id: user.id, count: user.credentials.version },
-              'resetPassword',
-            );
-            return new LocalMessageType(resetToken);
-          }
-
-          return new LocalMessageType('Password reset email sent');
-        });
-
-      const message2 = await authService.sendResetPasswordEmail({
-        email: EMAIL,
+    it('should sign in an user by username', async () => {
+      const { title, value } = await authService.signIn({
+        emailOrUsername: commonService.generatePointSlug(name),
+        password,
       });
-      expect(message2).toBeInstanceOf(LocalMessageType);
-      expect(message2.message).toBe(resetToken);
+      expect(title).toStrictEqual('auth');
 
-      user = await usersService.userById(userId);
-      const count = user.credentials.version;
+      if (title === 'auth') {
+        expect(value.user).toBeInstanceOf(UserEntity);
+        expect(value.accessToken).toBeDefined();
+        expect(isJWT(value.accessToken)).toBe(true);
+        expect(value.refreshToken).toBeDefined();
+        expect(isJWT(value.refreshToken)).toBe(true);
+      }
+    });
+
+    it('should throw an unauthorized exception if the password is wrong', async () => {
       await expect(
-        authService.resetPassword({
-          resetToken: 'asdadasd',
-          password1: NEW_PASSWORD,
-          password2: NEW_PASSWORD,
+        authService.signIn({
+          emailOrUsername: email,
+          password: password + '1',
         }),
-      ).rejects.toThrowError();
+      ).rejects.toThrowError('Invalid credentials');
+    });
+
+    it('should throw an unauthorized exception if email or username is wrong', async () => {
       await expect(
-        authService.resetPassword({
-          resetToken,
-          password1: PASSWORD,
-          password2: NEW_PASSWORD,
+        authService.signIn({
+          emailOrUsername: faker.internet.email(),
+          password,
         }),
-      ).rejects.toThrowError();
+      ).rejects.toThrowError('Invalid credentials');
+    });
 
-      const message = await authService.resetPassword({
-        resetToken,
-        password1: NEW_PASSWORD,
-        password2: NEW_PASSWORD,
+    it('should throw a bad request exception if the email is malformed', async () => {
+      await expect(
+        authService.signIn({
+          emailOrUsername: faker.internet.email() + '&',
+          password,
+        }),
+      ).rejects.toThrowError('Invalid email');
+    });
+
+    it('should throw a bad request exception if the username is malformed', async () => {
+      await expect(
+        authService.signIn({
+          emailOrUsername: 'username&',
+          password,
+        }),
+      ).rejects.toThrowError('Invalid username');
+    });
+
+    it('should throw an error if the user is not confirmed', async () => {
+      const email2 = faker.internet.email().toLowerCase();
+      await authService.signUp({
+        name,
+        email: email2,
+        password1: password,
+        password2: password,
       });
-      expect(message).toBeInstanceOf(LocalMessageType);
-      expect(message.message).toBe('Password reseted successfully');
-
-      const { id } = await verifyAuthToken(resetToken, 'resetPassword');
-      user = await usersService.userById(id);
-      expect(user.credentials.version).toBeGreaterThan(count);
+      await expect(
+        authService.signIn({
+          emailOrUsername: email2,
+          password,
+        }),
+      ).rejects.toThrowError(
+        'Please confirm your email, a new email has been sent',
+      );
     });
   });
 
-  describe('Update Auth Credentials', () => {
-    it('updatePassword', async () => {
-      let user = await usersService.userById(userId);
-      const count = user.credentials.version;
+  describe('refresh token', () => {
+    let token: string;
 
+    it('should create a refresh token', async () => {
+      token = await jwtService.generateToken(
+        {
+          ...baseUser,
+          credentials: {
+            ...baseUser.credentials,
+            version: 1,
+          },
+        },
+        TokenTypeEnum.REFRESH,
+      );
+      expect(token).toBeDefined();
+      expect(isJWT(token)).toBe(true);
+    });
+
+    it('should refresh the token', async () => {
+      const result = await authService.refreshTokenAccess(token);
+      expect(result.accessToken).toBeDefined();
+      expect(isJWT(result.accessToken)).toBe(true);
+      expect(result.refreshToken).toBeDefined();
+      expect(isJWT(result.refreshToken)).toBe(true);
+    });
+
+    it('should throw an error if the token is invalid', async () => {
       await expect(
-        authService.updatePassword(response as any, userId, {
-          password: PASSWORD,
-          password1: NEW_PASSWORD,
-          password2: NEW_PASSWORD,
-        }),
-      ).rejects.toThrowError('Wrong password');
+        authService.refreshTokenAccess(token + '1'),
+      ).rejects.toThrowError('Invalid token');
+    });
+  });
+
+  describe('logout', () => {
+    it('should blacklist the token', async () => {
+      const token = await jwtService.generateToken(
+        baseUser,
+        TokenTypeEnum.REFRESH,
+      );
+      const { id, tokenId } = await jwtService.verifyToken<IRefreshToken>(
+        token,
+        TokenTypeEnum.REFRESH,
+      );
+      expect(
+        await cacheManager.get(`blacklist:${id}:${tokenId}`),
+      ).toBeUndefined();
+      const message = await authService.logout(token);
+      expect(message.message).toStrictEqual('Logout successful');
+      expect(isUUID(message.id)).toBe(true);
+      expect(
+        await cacheManager.get(`blacklist:${id}:${tokenId}`),
+      ).toBeDefined();
+
+      await expect(authService.refreshTokenAccess(token)).rejects.toThrowError(
+        'Invalid token',
+      );
+    });
+  });
+
+  describe('reset password email', () => {
+    it('should send the reset password email', async () => {
+      jest.spyOn(emailService, 'sendResetPasswordEmail').mockImplementation();
+
+      const message = await authService.resetPasswordEmail({ email });
+      expect(message.message).toStrictEqual('Reset password email sent');
+      expect(isUUID(message.id)).toBe(true);
+      expect(emailService.sendResetPasswordEmail).toBeCalledTimes(1);
+    });
+
+    it('should not sent the reset password email', async () => {
+      const message = await authService.resetPasswordEmail({
+        email: faker.internet.email(),
+      });
+      expect(message.message).toStrictEqual('Reset password email sent');
+      expect(isUUID(message.id)).toBe(true);
+      expect(emailService.sendResetPasswordEmail).toBeCalledTimes(1);
+    });
+  });
+
+  const newPassword = faker.internet.password();
+  describe('reset password', () => {
+    let token: string;
+
+    it('should create a reset password token', async () => {
+      token = await jwtService.generateToken(
+        {
+          ...baseUser,
+          credentials: {
+            ...baseUser.credentials,
+            version: 1,
+          },
+        },
+        TokenTypeEnum.RESET_PASSWORD,
+      );
+      expect(token).toBeDefined();
+      expect(isJWT(token)).toBe(true);
+    });
+
+    it('should throw an error if the passwords do not match', async () => {
       await expect(
-        authService.updatePassword(response as any, userId, {
-          password: NEW_PASSWORD,
-          password1: NEW_PASSWORD,
-          password2: NEW_PASSWORD,
-        }),
-      ).rejects.toThrowError('The new password has to differ from the old one');
-      await expect(
-        authService.updatePassword(response as any, userId, {
-          password: NEW_PASSWORD,
-          password1: PASSWORD,
-          password2: NEW_PASSWORD,
+        authService.resetPassword({
+          resetToken: token,
+          password1: newPassword,
+          password2: newPassword + '1',
         }),
       ).rejects.toThrowError('Passwords do not match');
-
-      const auth = await authService.updatePassword(response as any, userId, {
-        password: NEW_PASSWORD,
-        password1: PASSWORD,
-        password2: PASSWORD,
-      });
-      expect(auth.accessToken).toBeDefined();
-
-      const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      user = await usersService.userById(id);
-      expect(user.credentials.version).toBeGreaterThan(count);
     });
 
-    it('updateEmail', async () => {
-      let user = await usersService.userById(userId);
-      const count = user.credentials.version;
+    it('should reset the password', async () => {
+      const message = await authService.resetPassword({
+        resetToken: token,
+        password1: newPassword,
+        password2: newPassword,
+      });
+      expect(message.message).toStrictEqual('Password reset successfully');
+      expect(isUUID(message.id)).toBe(true);
+    });
+
+    it('should throw an error if the token is invalid', async () => {
       await expect(
-        authService.updateEmail(response as any, userId, {
-          email: NEW_EMAIL,
-          password: NEW_PASSWORD,
+        authService.resetPassword({
+          resetToken: token + '1',
+          password1: newPassword,
+          password2: newPassword,
+        }),
+      ).rejects.toThrowError('Invalid token');
+    });
+
+    it('should throw an unauthorized exception if token has been used', async () => {
+      await expect(
+        authService.resetPassword({
+          resetToken: token,
+          password1: newPassword,
+          password2: newPassword,
+        }),
+      ).rejects.toThrowError('Invalid credentials');
+    });
+
+    it('old password should not work', async () => {
+      await expect(
+        authService.signIn({
+          emailOrUsername: email,
+          password,
+        }),
+      ).rejects.toThrowError('You changed your password recently');
+    });
+  });
+
+  const newPassword2 = faker.internet.password();
+  describe('change password', () => {
+    it('should throw an error if the passwords do not match', async () => {
+      await expect(
+        authService.updatePassword(1, {
+          password1: newPassword2,
+          password2: newPassword2 + '1',
+          password: newPassword,
+        }),
+      ).rejects.toThrowError('Passwords do not match');
+    });
+
+    it('should throw an error if the old password is incorrect', async () => {
+      await expect(
+        authService.updatePassword(1, {
+          password1: newPassword2,
+          password2: newPassword2,
+          password: newPassword + '1',
         }),
       ).rejects.toThrowError('Wrong password');
+    });
+
+    it('should throw an error if password is the same as the old password', async () => {
       await expect(
-        authService.updateEmail(response as any, userId, {
-          email: EMAIL,
-          password: PASSWORD,
+        authService.updatePassword(1, {
+          password1: newPassword,
+          password2: newPassword,
+          password: newPassword,
         }),
-      ).rejects.toThrowError('The new email has to differ from the old one');
-
-      const auth = await authService.updateEmail(response as any, userId, {
-        email: NEW_EMAIL,
-        password: PASSWORD,
-      });
-
-      const { id } = await verifyAuthToken(auth.accessToken, 'access');
-      user = await usersService.userById(id);
-      expect(user.credentials.version).toBeGreaterThan(count);
+      ).rejects.toThrowError('New password must be different');
     });
 
-    describe('WS Auth', () => {
-      it('generateWsSession', async () => {
-        await expect(
-          authService.generateWsSession('asdasd'),
-        ).rejects.toThrowError();
-
-        const token = await generateAuthToken({ id: userId }, 'access');
-        const [id, sessionId] = await authService.generateWsSession(token);
-
-        expect(id).toBe(userId);
-        expect(sessionId).toBeDefined();
+    it('should change the password', async () => {
+      const result = await authService.updatePassword(1, {
+        password1: newPassword2,
+        password2: newPassword2,
+        password: newPassword,
       });
-
-      it('refreshUserSession', async () => {
-        jest
-          .spyOn(authService, 'generateWsSession')
-          .mockImplementationOnce(async (accessToken) => {
-            const { id } = await verifyAuthToken(accessToken, 'access');
-            const user = await usersService.userById(id);
-            const userUuid = v5(
-              user.id.toString(),
-              configService.get<string>('WS_UUID'),
-            );
-            const count = user.credentials.version;
-            let sessionData = await commonService.throwInternalError(
-              cacheManager.get<ISessionsData>(userUuid),
-            );
-
-            if (!sessionData || sessionData.count != count) {
-              sessionData = {
-                sessions: {},
-                count,
-              };
-              user.onlineStatus = user.defaultStatus;
-            }
-
-            const sessionId = v4();
-            sessionData.sessions[sessionId] = dayjs()
-              .subtract(
-                configService.get<number>('jwt.access.time') + 1,
-                'second',
-              )
-              .unix();
-            await commonService.throwInternalError(
-              cacheManager.set(
-                userUuid,
-                sessionData,
-                configService.get<number>('sessionTime'),
-              ),
-            );
-
-            return [id, sessionId];
-          });
-
-        const token = await generateAuthToken({ id: userId }, 'access');
-        const [id, sessionId] = await authService.generateWsSession(token);
-
-        expect(id).toBe(userId);
-        expect(sessionId).toBeDefined();
-        expect(
-          await authService.refreshUserSession({ userId, sessionId }),
-        ).toBe(true);
-
-        await authService.updateEmail(response as any, userId, {
-          email: EMAIL,
-          password: PASSWORD,
-        });
-
-        setTimeout(
-          async () =>
-            expect(
-              await authService.refreshUserSession({ userId, sessionId }),
-            ).toBe(false),
-          150,
-        );
-      });
-
-      it('closeUserSession', async () => {
-        const token = await generateAuthToken({ id: userId }, 'access');
-        const [id, sessionId] = await authService.generateWsSession(token);
-        expect(id).toBe(userId);
-        expect(sessionId).toBeDefined();
-
-        const [id2, sessionId2] = await authService.generateWsSession(token);
-        expect(id2).toBe(userId);
-        expect(sessionId2).toBeDefined();
-
-        await authService.closeUserSession({ userId, sessionId });
-        const userUuid = v5(
-          userId.toString(),
-          configService.get<string>('WS_UUID'),
-        );
-
-        expect(await cacheManager.get(userUuid)).toBeDefined();
-
-        await authService.closeUserSession({ userId, sessionId: sessionId2 });
-        expect(await cacheManager.get(userUuid)).toBeUndefined();
-      });
+      expect(result.user).toBeInstanceOf(UserEntity);
+      expect(result.accessToken).toBeDefined();
+      expect(isJWT(result.accessToken)).toBe(true);
+      expect(result.refreshToken).toBeDefined();
+      expect(isJWT(result.refreshToken)).toBe(true);
     });
 
-    it('should be defined', () => {
-      expect(authService).toBeDefined();
-      expect(usersService).toBeDefined();
-      expect(configService).toBeDefined();
-      expect(commonService).toBeDefined();
-      expect(cacheManager).toBeDefined();
+    it('old password should not work', async () => {
+      await expect(
+        authService.signIn({
+          emailOrUsername: email,
+          password: newPassword,
+        }),
+      ).rejects.toThrowError('You changed your password recently');
     });
+  });
+
+  afterAll(async () => {
+    await orm.getSchemaGenerator().dropSchema();
+    await orm.close(true);
+    await module.close();
   });
 });

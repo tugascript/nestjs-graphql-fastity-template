@@ -1,133 +1,310 @@
-import { Body, Controller, Post, Req, Res, UseGuards } from '@nestjs/common';
+/*
+ Free and Open Source - GNU GPLv3
+
+ This file is part of nestjs-graphql-fastify-template
+
+ nestjs-graphql-fastify-template is distributed in the
+ hope that it will be useful, but WITHOUT ANY WARRANTY;
+ without even the implied warranty of MERCHANTABILITY
+ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ General Public License for more details.
+
+ Copyright © 2023
+ Afonso Barracha
+*/
+
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Patch,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import {
+  ApiBadRequestResponse,
+  ApiConflictResponse,
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { LocalMessageType } from '../common/entities/gql/message.type';
+import { isNull, isUndefined } from '../config/utils/validation.util';
+import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { Origin } from './decorators/origin.decorator';
 import { Public } from './decorators/public.decorator';
-import { ChangeEmailDto } from './dtos/change-email.dto';
 import { ChangePasswordDto } from './dtos/change-password.dto';
+import { ChangeTwoFactorDto } from './dtos/change-two-factor.dto';
 import { ConfirmEmailDto } from './dtos/confirm-email.dto';
-import { ConfirmLoginDto } from './dtos/confirm-login.dto';
-import { LoginDto } from './dtos/login.dto';
-import { RegisterDto } from './dtos/register.dto';
-import { ResetEmailDto } from './dtos/reset-email.dto';
+import { EmailDto } from './dtos/email.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { SignInDto } from './dtos/sign-in.dto';
+import { SignUpDto } from './dtos/sign-up.dto';
 import { FastifyThrottlerGuard } from './guards/fastify-throttler.guard';
+import { AuthResponseMapper } from './mappers/auth-response.mapper';
 
+@ApiTags('Auth')
 @Controller('api/auth')
 @UseGuards(FastifyThrottlerGuard)
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  private readonly cookiePath = '/api/auth';
+  private readonly cookieName: string;
+  private readonly refreshTime: number;
+  private readonly testing: boolean;
+
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
+  ) {
+    this.cookieName = this.configService.get<string>('REFRESH_COOKIE');
+    this.refreshTime = this.configService.get<number>('jwt.refresh.time');
+    this.testing = this.configService.get<boolean>('testing');
+  }
 
   @Public()
-  @Post('/register')
-  public async registerUser(
-    @Body() registerDto: RegisterDto,
+  @Post('/sign-up')
+  @ApiCreatedResponse({
+    type: LocalMessageType,
+    description: 'The user has been created and is waiting confirmation',
+  })
+  @ApiConflictResponse({
+    description: 'Email already in use',
+  })
+  @ApiBadRequestResponse({
+    description: 'Something is invalid on the request body',
+  })
+  public async signUp(
+    @Origin() origin: string | undefined,
+    @Body() signUpDto: SignUpDto,
   ): Promise<LocalMessageType> {
-    return this.authService.registerUser(registerDto);
+    return await this.authService.signUp(signUpDto, origin);
   }
 
   @Public()
-  @Post('/confirm-email')
-  public async confirmEmail(
+  @Post('/sign-in')
+  @ApiOkResponse({
+    type: AuthResponseMapper,
+    description: 'Logs in the user and returns the access token',
+  })
+  @ApiBadRequestResponse({
+    description: 'Something is invalid on the request body',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid credentials or User is not confirmed',
+  })
+  public async signIn(
     @Res() res: FastifyReply,
-    @Body() confirmEmailDto: ConfirmEmailDto,
+    @Origin() origin: string | undefined,
+    @Body() singInDto: SignInDto,
   ): Promise<void> {
-    const result = await this.authService.confirmEmail(res, confirmEmailDto);
-    res.status(200).send(result);
-  }
+    const result = await this.authService.signIn(singInDto, origin);
 
-  @Public()
-  @Post('/login')
-  public async loginUser(
-    @Res() res: FastifyReply,
-    @Body() loginDto: LoginDto,
-  ): Promise<void> {
-    const result = await this.authService.loginUser(res, loginDto);
-    res.status(200).send(result);
-  }
+    if (result.title === 'message') {
+      res.status(HttpStatus.OK).send(result.value);
+      return;
+    }
 
-  @Public()
-  @Post('/confirm-login')
-  public async confirmLogin(
-    @Res() res: FastifyReply,
-    @Body() confirmLoginDto: ConfirmLoginDto,
-  ): Promise<void> {
-    const result = await this.authService.confirmLogin(res, confirmLoginDto);
-    res.status(200).send(result);
-  }
-
-  @Post('/confirm-credentials')
-  public async confirmCredentials(
-    @CurrentUser() userId: number,
-  ): Promise<LocalMessageType> {
-    return this.authService.confirmCredentials(userId);
-  }
-
-  @Post('/logout')
-  public logoutUser(@Res() res: FastifyReply): void {
-    const message = this.authService.logoutUser(res);
-    res.status(200).send(message);
+    this.saveRefreshCookie(res, result.value.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result.value));
   }
 
   @Public()
   @Post('/refresh-access')
-  public async refreshAccessToken(
+  @ApiOkResponse({
+    type: AuthResponseMapper,
+    description: 'Refreshes and returns the access token',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid token',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Something is invalid on the request body, or Token is invalid or expired',
+  })
+  public async refreshAccess(
     @Req() req: FastifyRequest,
     @Res() res: FastifyReply,
   ): Promise<void> {
-    const result = await this.authService.refreshAccessToken(req, res);
-    res.status(200).send(result);
+    const token = this.refreshTokenFromReq(req);
+    const result = await this.authService.refreshTokenAccess(
+      token,
+      req.headers.origin,
+    );
+    this.saveRefreshCookie(res, result.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result));
+  }
+
+  @Post('/logout')
+  @ApiOkResponse({
+    type: LocalMessageType,
+    description: 'The user is logged out',
+  })
+  @ApiBadRequestResponse({
+    description: 'Something is invalid on the request body',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid token',
+  })
+  public async logout(
+    @Req() req: FastifyRequest,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    const token = this.refreshTokenFromReq(req);
+    const message = await this.authService.logout(token);
+    res
+      .clearCookie(this.cookieName, { path: this.cookiePath })
+      .header('Content-Type', 'application/json')
+      .status(HttpStatus.OK)
+      .send(message);
   }
 
   @Public()
-  @Post('/reset-password-email')
-  public async sendResetPasswordEmail(
-    @Body() resetEmailDto: ResetEmailDto,
+  @Post('/confirm-email')
+  @ApiOkResponse({
+    type: AuthResponseMapper,
+    description: 'Confirms the user email and returns the access token',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'Invalid token',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Something is invalid on the request body, or Token is invalid or expired',
+  })
+  public async confirmEmail(
+    @Origin() origin: string | undefined,
+    @Body() confirmEmailDto: ConfirmEmailDto,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    const result = await this.authService.confirmEmail(confirmEmailDto);
+    this.saveRefreshCookie(res, result.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result));
+  }
+
+  @Public()
+  @Post('/forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: LocalMessageType,
+    description:
+      'An email has been sent to the user with the reset password link',
+  })
+  public async forgotPassword(
+    @Origin() origin: string | undefined,
+    @Body() emailDto: EmailDto,
   ): Promise<LocalMessageType> {
-    return this.authService.sendResetPasswordEmail(resetEmailDto);
+    return this.authService.resetPasswordEmail(emailDto, origin);
   }
 
   @Public()
   @Post('/reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOkResponse({
+    type: LocalMessageType,
+    description: 'The password has been reset',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'Something is invalid on the request body, or Token is invalid or expired',
+  })
   public async resetPassword(
     @Body() resetPasswordDto: ResetPasswordDto,
   ): Promise<LocalMessageType> {
     return this.authService.resetPassword(resetPasswordDto);
   }
 
-  @Post('/toggle-two-factor')
-  public async changeTwoFactorAuth(
-    @CurrentUser() userId: number,
-  ): Promise<LocalMessageType> {
-    return this.authService.changeTwoFactorAuth(userId);
-  }
-
-  @Post('/update-email')
-  public async updateEmail(
-    @Res() res: FastifyReply,
-    @CurrentUser() userId: number,
-    @Body() changeEmailDto: ChangeEmailDto,
-  ): Promise<void> {
-    const result = await this.authService.updateEmail(
-      res,
-      userId,
-      changeEmailDto,
-    );
-    res.status(200).send(result);
-  }
-
-  @Post('/update-password')
+  @Patch('/update-password')
+  @ApiOkResponse({
+    type: AuthResponseMapper,
+    description: 'The password has been updated',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'The user is not logged in.',
+  })
   public async updatePassword(
-    @Res() res: FastifyReply,
     @CurrentUser() userId: number,
+    @Origin() origin: string | undefined,
     @Body() changePasswordDto: ChangePasswordDto,
+    @Res() res: FastifyReply,
   ): Promise<void> {
     const result = await this.authService.updatePassword(
-      res,
       userId,
       changePasswordDto,
+      origin,
     );
-    res.status(200).send(result);
+    this.saveRefreshCookie(res, result.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result));
+  }
+
+  @Patch('/update-two-factor')
+  @ApiOkResponse({
+    type: AuthResponseMapper,
+    description: 'The two factor has been updated',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'The user is not logged in.',
+  })
+  public async updateTwoFactor(
+    @CurrentUser() userId: number,
+    @Origin() origin: string | undefined,
+    @Req() req: FastifyRequest,
+    @Body() changeTwoFactorDto: ChangeTwoFactorDto,
+    @Res() res: FastifyReply,
+  ): Promise<void> {
+    const token = this.refreshTokenFromReq(req);
+    const result = await this.authService.updateTwoFactor(
+      userId,
+      changeTwoFactorDto.twoFactor,
+      token,
+      origin,
+    );
+    this.saveRefreshCookie(res, result.refreshToken)
+      .status(HttpStatus.OK)
+      .send(AuthResponseMapper.map(result));
+  }
+
+  private refreshTokenFromReq(req: FastifyRequest): string {
+    const token: string | undefined = req.cookies[this.cookieName];
+
+    if (isUndefined(token) || isNull(token)) {
+      throw new UnauthorizedException();
+    }
+
+    const { valid, value } = req.unsignCookie(token);
+
+    if (!valid) {
+      throw new UnauthorizedException();
+    }
+
+    return value;
+  }
+
+  private saveRefreshCookie(
+    res: FastifyReply,
+    refreshToken: string,
+  ): FastifyReply {
+    return res
+      .cookie(this.cookieName, refreshToken, {
+        secure: !this.testing,
+        httpOnly: true,
+        signed: true,
+        path: this.cookiePath,
+        expires: new Date(Date.now() + this.refreshTime * 1000),
+      })
+      .header('Content-Type', 'application/json');
   }
 }
