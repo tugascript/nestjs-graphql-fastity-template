@@ -4115,22 +4115,22 @@ __metadata:
   linkType: hard
 
 "altair-fastify-plugin@npm:^5.0.21":
-  version: 5.0.21
-  resolution: "altair-fastify-plugin@npm:5.0.21"
+  version: 5.0.22
+  resolution: "altair-fastify-plugin@npm:5.0.22"
   dependencies:
     "@fastify/static": ^6.4.0
-    altair-static: ^5.0.21
+    altair-static: ^5.0.22
     fastify-plugin: ^2.3.4
   peerDependencies:
     fastify: ^4.0.3
-  checksum: 0a9557e534a9412554bb71c0d58837f4f275288fd4862412052a36cb77310488f862e2f9c4465620f6f9e53047d7a46ab5321c205550fcb0043e9a001f718ae4
+  checksum: 010a32541f3c27a4081e1dbfedaaafa58a983e9084c81cfeb62e31fa7b71adc1ca035530cc4460b16ad13ab6becf69c22ee33bab9fb441c4692b8425183fd3eb
   languageName: node
   linkType: hard
 
-"altair-static@npm:^5.0.21":
-  version: 5.0.21
-  resolution: "altair-static@npm:5.0.21"
-  checksum: f9977fc1051738960478314b3db6872605757d0ebbfb656a79706fb77390840ecba81a83a806f34e30ce3e7a5a19f35c0232f6efe3d458d2451653a40b5654ca
+"altair-static@npm:^5.0.22":
+  version: 5.0.22
+  resolution: "altair-static@npm:5.0.22"
+  checksum: 25d4bdf4f6cab11bcb824034be57ce2fb0547f6a12027c2caa5aea78d18affb8ed7451da77cd4f7b409f5eff5d96518948719e116e304a0ccf355c72a7e6a763
   languageName: node
   linkType: hard
 
