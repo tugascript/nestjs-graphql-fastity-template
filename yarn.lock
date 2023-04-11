@@ -2818,8 +2818,8 @@ __metadata:
   linkType: hard
 
 "@nestjs/graphql@npm:^11.0.4":
-  version: 11.0.4
-  resolution: "@nestjs/graphql@npm:11.0.4"
+  version: 11.0.5
+  resolution: "@nestjs/graphql@npm:11.0.5"
   dependencies:
     "@graphql-tools/merge": 8.4.0
     "@graphql-tools/schema": 9.0.17
@@ -2828,7 +2828,7 @@ __metadata:
     chokidar: 3.5.3
     fast-glob: 3.2.12
     graphql-tag: 2.12.6
-    graphql-ws: 5.12.0
+    graphql-ws: 5.12.1
     lodash: 4.17.21
     normalize-path: 3.0.0
     subscriptions-transport-ws: 0.11.0
@@ -2843,7 +2843,7 @@ __metadata:
     class-validator: "*"
     graphql: ^16.6.0
     reflect-metadata: ^0.1.13
-    ts-morph: ^15.0.0 || ^16.0.0 || ^17.0.0
+    ts-morph: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0
   peerDependenciesMeta:
     "@apollo/subgraph":
       optional: true
@@ -2853,7 +2853,7 @@ __metadata:
       optional: true
     ts-morph:
       optional: true
-  checksum: 563c4dbda83af4e88fc1e5e62c3aaf2dcd59551d741e81c1fdf4f1afd1caa94f0c50c4c17212be8787f1c13a591896198bbb2d5733d0e3986cf02f9e177bbe61
+  checksum: f8ca893fc2f1fd7b344b5ed1c92c89427d9506207a92d7c495633151fa5c8e59c9bd8facfec195e2861387518cccdf2f1285fb06d1c1f8c97d5781d1419ee555
   languageName: node
   linkType: hard
 
@@ -6814,16 +6814,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql-ws@npm:5.12.0":
-  version: 5.12.0
-  resolution: "graphql-ws@npm:5.12.0"
-  peerDependencies:
-    graphql: ">=0.11 <=16"
-  checksum: 5c683e2d5bdadfcfec0639eda69b8a66ef275e68e64f662bd75da6779a87b34395cbce8e37cb66830a9febca1871f7dc2575e6814f6f6e899904fe72e245f216
-  languageName: node
-  linkType: hard
-
-"graphql-ws@npm:^5.11.2":
+"graphql-ws@npm:5.12.1, graphql-ws@npm:^5.11.2":
   version: 5.12.1
   resolution: "graphql-ws@npm:5.12.1"
   peerDependencies:
