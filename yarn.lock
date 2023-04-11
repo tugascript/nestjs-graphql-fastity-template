@@ -2875,8 +2875,8 @@ __metadata:
   linkType: hard
 
 "@nestjs/mercurius@npm:^11.0.3":
-  version: 11.0.3
-  resolution: "@nestjs/mercurius@npm:11.0.3"
+  version: 11.0.5
+  resolution: "@nestjs/mercurius@npm:11.0.5"
   dependencies:
     tslib: 2.5.0
   peerDependencies:
@@ -2895,7 +2895,7 @@ __metadata:
       optional: true
     "@mercuriusjs/gateway":
       optional: true
-  checksum: f08ddc0f775631bf0c310a2be1c2a0cfa83d55e807fa2464b0845dc8284ce6d7462f74abb88c4794a230adcd7956403c57fba5b84390a1fa9d73fc67fffa610f
+  checksum: a26e013195f1073ddefc50ab3900e5b796f56f120e2b985c78f1b301175e4ee1c5f168bcfeb678119436b61a4b6b88c2c5dad787b153403cc9abf184a60a6f80
   languageName: node
   linkType: hard
 
