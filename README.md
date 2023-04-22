@@ -1,11 +1,9 @@
-# NestJS GraphQL Monolith Fastify
+# NestJS GraphQL Fastify Template
 
 ## Description
 
-Full [NodeJS](https://nodejs.org/en/) boilerplate of a [NestJS](https://nestjs.com/) [GraphQL](https://graphql.org/)
-monolithic backend API using [PostgreSQL](https://www.postgresql.org/) as the database.
-
-**NOTE:** Now that NestJS supports Mercurius plugins and hooks out of the box, this template is almost production ready.
+Full [NodeJS](https://nodejs.org/en/) boilerplate of a [NestJS](https://nestjs.com/) [GraphQL](https://graphql.org/) API
+using [PostgreSQL](https://www.postgresql.org/) as the database.
 
 ### Technologies
 
@@ -188,14 +186,21 @@ $ yarn start:dev
 
 ```bash
 # unit tests
-$ yarn run test
+$ yarn test
 ```
 
 ### Individual test
 
 ```bash
 # unit tests
-$ yarn run test service-name.service.spec.ts
+$ yarn test service-name.service.spec.ts
+```
+
+## E2E Testing
+
+```bash
+# e2e tests
+$ yarn test:e2e
 ```
 
 ## Deployment
@@ -276,4 +281,4 @@ to [support them.](https://opencollective.com/libvips)
 
 ## License
 
-This project is [GNU General Public License v3.0](LICENSE) licensed. A commercial version will be released shortly.
+This project is [Mozilla Public License 2.0](LICENSE) licensed.

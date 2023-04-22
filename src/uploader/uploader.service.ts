@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -19,20 +15,32 @@ import {
   S3Client,
   S3ClientConfig,
 } from '@aws-sdk/client-s3';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  LoggerService,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sharp from 'sharp';
 import { IBucketData } from 'src/config/interfaces/bucket-data.inteface';
 import { Readable } from 'stream';
-import { v4 as uuidV4 } from 'uuid';
+import { v4 as uuidV4, v5 as uuidV5 } from 'uuid';
 import { CommonService } from '../common/common.service';
+import { RatioEnum } from '../common/enums/ratio.enum';
 import { FileUploadDto } from './dtos/file-upload.dto';
-import { MAX_WIDTH, QUALITY_ARRAY } from './utils/uploader.constants';
+import {
+  IMAGE_SIZE,
+  MAX_WIDTH,
+  QUALITY_ARRAY,
+} from './utils/uploader.constants';
 
 @Injectable()
 export class UploaderService {
   private readonly client: S3Client;
   private readonly bucketData: IBucketData;
+  private readonly loggerService: LoggerService;
 
   constructor(
     private readonly configService: ConfigService,
@@ -42,6 +50,7 @@ export class UploaderService {
       this.configService.get<S3ClientConfig>('bucketConfig'),
     );
     this.bucketData = this.configService.get<IBucketData>('bucketData');
+    this.loggerService = new Logger(UploaderService.name);
   }
 
   private static validateImage(mimetype: string): string | false {
@@ -49,6 +58,17 @@ export class UploaderService {
     if (val[0] !== 'image') return false;
 
     return val[1] ?? false;
+  }
+
+  private static async streamToBuffer(stream: Readable): Promise<Buffer> {
+    const buffer: Uint8Array[] = [];
+
+    return new Promise((resolve, reject) =>
+      stream
+        .on('error', (error) => reject(error))
+        .on('data', (data) => buffer.push(data))
+        .on('end', () => resolve(Buffer.concat(buffer))),
+    );
   }
 
   private static async compressImage(
@@ -60,16 +80,17 @@ export class UploaderService {
       chromaSubsampling: '4:4:4',
     });
 
-    if (ratio)
+    if (ratio) {
       compressBuffer.resize({
         width: MAX_WIDTH,
         height: Math.round(MAX_WIDTH * ratio),
         fit: 'cover',
       });
+    }
 
     compressBuffer = await compressBuffer.toBuffer();
 
-    if (compressBuffer.length > 256000) {
+    if (compressBuffer.length > IMAGE_SIZE) {
       for (let i = 0; i < QUALITY_ARRAY.length; i++) {
         const quality = QUALITY_ARRAY[i];
         const smallerBuffer = await sharp(compressBuffer)
@@ -79,7 +100,7 @@ export class UploaderService {
           })
           .toBuffer();
 
-        if (smallerBuffer.length <= 256000 || quality === 10) {
+        if (smallerBuffer.length <= IMAGE_SIZE || quality === 10) {
           compressBuffer = smallerBuffer;
           break;
         }
@@ -97,57 +118,48 @@ export class UploaderService {
   public async uploadImage(
     userId: number,
     file: Promise<FileUploadDto>,
-    ratio?: number,
+    ratio?: RatioEnum,
   ): Promise<string> {
     const { mimetype, createReadStream } = await file;
-
     const imageType = UploaderService.validateImage(mimetype);
-    if (!imageType)
+
+    if (!imageType) {
       throw new BadRequestException('Please upload a valid image');
+    }
 
-    let buffer = await this.commonService.throwInternalError(
-      this.streamToBuffer(createReadStream()),
+    return await this.commonService.throwInternalError(
+      this.uploadFile(
+        userId,
+        await UploaderService.compressImage(
+          await UploaderService.streamToBuffer(createReadStream()),
+          ratio,
+        ),
+        '.jpg',
+      ),
     );
-    buffer = await UploaderService.compressImage(buffer, ratio);
-
-    return await this.uploadFile(userId, buffer, '.jpg');
   }
 
   /**
    * Delete File
    *
-   * Takes an url and deletes the file from the bucket
+   * Takes a file url and deletes the file from the bucket
    */
-  public async deleteFile(url: string): Promise<void> {
-    if (!this.validateBucketUrl(url))
-      throw new BadRequestException('Url not valid');
-    const keyArr = url.split('/');
+  public deleteFile(url: string): void {
+    const keyArr = url.split('.com/');
 
-    try {
-      await this.client.send(
+    if (keyArr.length !== 2 || !this.bucketData.url.includes(keyArr[0])) {
+      this.loggerService.error('Invalid url to delete file');
+    }
+
+    this.client
+      .send(
         new DeleteObjectCommand({
           Bucket: this.bucketData.name,
-          Key: keyArr[keyArr.length - 1],
+          Key: keyArr[1],
         }),
-      );
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  private validateBucketUrl(url: string): boolean {
-    return url.includes(this.bucketData.url.substring(8));
-  }
-
-  private async streamToBuffer(stream: Readable): Promise<Buffer> {
-    const buffer = [];
-
-    return new Promise((resolve, reject) =>
-      stream
-        .on('error', (error) => reject(error))
-        .on('data', (data) => buffer.push(data))
-        .on('end', () => resolve(Buffer.concat(buffer))),
-    );
+      )
+      .then(() => this.loggerService.log('File deleted successfully'))
+      .catch((error) => this.loggerService.error(error));
   }
 
   private async uploadFile(
@@ -155,18 +167,25 @@ export class UploaderService {
     fileBuffer: Buffer,
     fileExt: string,
   ): Promise<string> {
-    const key = userId.toString() + '_' + uuidV4() + fileExt;
+    const key =
+      uuidV5(userId.toString(), this.bucketData.uuid) +
+      '/' +
+      uuidV4() +
+      fileExt;
 
-    await this.commonService.throwInternalError(
-      this.client.send(
+    try {
+      await this.client.send(
         new PutObjectCommand({
           Bucket: this.bucketData.name,
           Body: fileBuffer,
           Key: key,
           ACL: 'public-read',
         }),
-      ),
-    );
+      );
+    } catch (error) {
+      this.loggerService.error(error);
+      throw new InternalServerErrorException('Error uploading file');
+    }
 
     return this.bucketData.url + key;
   }

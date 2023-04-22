@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -15,9 +11,9 @@
 
 import { InjectRepository } from '@mikro-orm/nestjs';
 import { EntityRepository } from '@mikro-orm/postgresql';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import {
   BadRequestException,
-  CACHE_MANAGER,
   ConflictException,
   Inject,
   Injectable,
@@ -38,11 +34,12 @@ import { isNull, isUndefined } from '../config/utils/validation.util';
 import { PictureDto } from '../uploader/dtos/picture.dto';
 import { UploaderService } from '../uploader/uploader.service';
 import { UpdateEmailDto } from './dtos/update-email.dto';
+import { CredentialsEmbeddable } from './embeddables/credentials.embeddable';
+import { OAuthProviderEntity } from './entities/oauth-provider.entity';
 import { UserEntity } from './entities/user.entity';
+import { OAuthProvidersEnum } from './enums/oauth-providers.enum';
 import { OnlineStatusEnum } from './enums/online-status.enum';
 import { IUser } from './interfaces/user.interface';
-import { OAuthProvidersEnum } from './enums/oauth-providers.enum';
-import { OAuthProviderEntity } from './entities/oauth-provider.entity';
 
 @Injectable()
 export class UsersService {
@@ -68,6 +65,7 @@ export class UsersService {
     name: string,
     password?: string,
   ): Promise<UserEntity> {
+    const isConfirmed = provider !== OAuthProvidersEnum.LOCAL;
     const formattedEmail = email.toLowerCase();
     await this.checkEmailUniqueness(formattedEmail);
     const formattedName = this.commonService.formatTitle(name);
@@ -76,10 +74,11 @@ export class UsersService {
       name: formattedName,
       username: await this.generateUsername(formattedName),
       password: isUndefined(password) ? 'UNSET' : await hash(password, 10),
-      confirmed: provider !== OAuthProvidersEnum.LOCAL,
+      confirmed: isConfirmed,
+      credentials: new CredentialsEmbeddable(isConfirmed),
     });
     await this.commonService.saveEntity(this.usersRepository, user, true);
-    await this.createOAuthProvider(provider, user);
+    await this.createOAuthProvider(provider, user.id);
     return user;
   }
 
@@ -94,7 +93,7 @@ export class UsersService {
         email: formattedEmail,
       },
       {
-        populate: ['authProviders'],
+        populate: ['oauthProviders'],
       },
     );
 
@@ -102,11 +101,11 @@ export class UsersService {
       return this.create(provider, email, name);
     }
     if (
-      !user.authProviders.contains(
-        this.oauthProvidersRepository.getReference([provider, user.id]),
+      isUndefined(
+        user.oauthProviders.getItems().find((p) => p.provider === provider),
       )
     ) {
-      await this.createOAuthProvider(provider, user);
+      await this.createOAuthProvider(provider, user.id);
     }
 
     return user;
@@ -273,16 +272,22 @@ export class UsersService {
     );
 
     if (!isUndefined(oldPicture) && !isNull(oldPicture)) {
-      this.uploaderService
-        .deleteFile(oldPicture)
-        .then(() => {
-          this.loggerService.log(`Deleted old picture: ${oldPicture}`);
-        })
-        .catch(() => {
-          this.loggerService.error(`Error deleting old picture: ${oldPicture}`);
-        });
+      this.uploaderService.deleteFile(oldPicture);
     }
 
+    await this.commonService.saveEntity(this.usersRepository, user);
+    return user;
+  }
+
+  public async removePicture(userId: number): Promise<UserEntity> {
+    const user = await this.findOneById(userId);
+
+    if (isUndefined(user.picture) || isNull(user.picture)) {
+      throw new BadRequestException('No picture to remove');
+    }
+
+    this.uploaderService.deleteFile(user.picture);
+    user.picture = null;
     await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
@@ -292,18 +297,6 @@ export class UsersService {
     const user = await this.findOneById(userId);
     user.name = formatName;
     user.username = await this.generateUsername(formatName);
-    await this.commonService.saveEntity(this.usersRepository, user);
-    return user;
-  }
-
-  public async updateUsername(
-    userId: number,
-    username: string,
-  ): Promise<UserEntity> {
-    const user = await this.findOneById(userId);
-    const formattedUsername = username.toLowerCase();
-    await this.checkUsernameUniqueness(formattedUsername);
-    user.username = formattedUsername;
     await this.commonService.saveEntity(this.usersRepository, user);
     return user;
   }
@@ -351,13 +344,24 @@ export class UsersService {
     );
   }
 
+  public async findOAuthProviders(
+    userId: number,
+  ): Promise<OAuthProviderEntity[]> {
+    return await this.oauthProvidersRepository.find(
+      {
+        user: userId,
+      },
+      { orderBy: { provider: QueryOrderEnum.ASC } },
+    );
+  }
+
   private async createOAuthProvider(
     provider: OAuthProvidersEnum,
-    user: UserEntity,
+    userId: number,
   ): Promise<OAuthProviderEntity> {
     const oauthProvider = this.oauthProvidersRepository.create({
       provider,
-      user,
+      user: userId,
     });
     await this.commonService.saveEntity(
       this.oauthProvidersRepository,
@@ -365,14 +369,6 @@ export class UsersService {
       true,
     );
     return oauthProvider;
-  }
-
-  private async checkUsernameUniqueness(username: string): Promise<void> {
-    const count = await this.usersRepository.count({ username });
-
-    if (count > 0) {
-      throw new ConflictException('Username already in use');
-    }
   }
 
   private throwUnauthorizedException(

@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -16,39 +12,48 @@
 import { randomBytes } from 'crypto';
 import { AuthorizationCode } from 'simple-oauth2';
 import { OAuthProvidersEnum } from '../../users/enums/oauth-providers.enum';
-import { IAuth } from '../interfaces/auth.interface';
-import { IAuthorization } from '../interfaces/authorization.interface';
+import { IAuthParams } from '../interfaces/auth-params.interface';
 import { IClient } from '../interfaces/client.interface';
+import { IProvider } from '../interfaces/provider.interface';
 
 export class OAuthClass {
-  private static readonly [OAuthProvidersEnum.MICROSOFT]: IAuth = {
+  private static readonly [OAuthProvidersEnum.MICROSOFT]: IProvider = {
     authorizeHost: 'https://login.microsoftonline.com',
     authorizePath: '/common/oauth2/v2.0/authorize',
     tokenHost: 'https://login.microsoftonline.com',
     tokenPath: '/common/oauth2/v2.0/token',
   };
-  private static readonly [OAuthProvidersEnum.GOOGLE]: IAuth = {
+  private static readonly [OAuthProvidersEnum.GOOGLE]: IProvider = {
     authorizeHost: 'https://accounts.google.com',
     authorizePath: '/o/oauth2/v2/auth',
     tokenHost: 'https://www.googleapis.com',
     tokenPath: '/oauth2/v4/token',
   };
-  private static readonly [OAuthProvidersEnum.FACEBOOK]: IAuth = {
+  private static readonly [OAuthProvidersEnum.FACEBOOK]: IProvider = {
     authorizeHost: 'https://facebook.com',
-    authorizePath: '/v6.0/dialog/oauth',
+    authorizePath: '/v9.0/dialog/oauth',
     tokenHost: 'https://graph.facebook.com',
-    tokenPath: '/v6.0/oauth/access_token',
+    tokenPath: '/v9.0/oauth/access_token',
   };
-  private static readonly [OAuthProvidersEnum.GITHUB]: IAuth = {
+  private static readonly [OAuthProvidersEnum.GITHUB]: IProvider = {
     authorizeHost: 'https://github.com',
     authorizePath: '/login/oauth/authorize',
     tokenHost: 'https://github.com',
     tokenPath: '/login/oauth/access_token',
   };
+  private static userDataUrls: Record<OAuthProvidersEnum, string> = {
+    [OAuthProvidersEnum.GOOGLE]:
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+    [OAuthProvidersEnum.MICROSOFT]: 'https://graph.microsoft.com/v1.0/me',
+    [OAuthProvidersEnum.FACEBOOK]:
+      'https://graph.facebook.com/v16.0/me?fields=email,name',
+    [OAuthProvidersEnum.GITHUB]: 'https://api.github.com/user',
+    [OAuthProvidersEnum.LOCAL]: '',
+  };
 
-  private readonly _code: AuthorizationCode;
-  private readonly _authorization: IAuthorization;
-  private readonly _dataUrl: string;
+  private readonly code: AuthorizationCode;
+  private readonly authorization: IAuthParams;
+  private readonly userDataUrl: string;
 
   constructor(
     private readonly provider: OAuthProvidersEnum,
@@ -59,31 +64,31 @@ export class OAuthClass {
       throw new Error('Invalid provider');
     }
 
-    this._code = new AuthorizationCode({
+    this.code = new AuthorizationCode({
       client,
       auth: OAuthClass[provider],
     });
-    this._authorization = OAuthClass.genAuthorization(provider, url);
-    this._dataUrl = OAuthClass.getUserDataUrl(provider);
+    this.authorization = OAuthClass.genAuthorization(provider, url);
+    this.userDataUrl = OAuthClass.userDataUrls[provider];
   }
 
   public get state(): string {
-    return this._authorization.state;
+    return this.authorization.state;
   }
 
   public get dataUrl(): string {
-    return this._dataUrl;
+    return this.userDataUrl;
   }
 
   public get authorizationUrl(): string {
-    return this._code.authorizeURL(this._authorization);
+    return this.code.authorizeURL(this.authorization);
   }
 
   private static genAuthorization(
     provider: OAuthProvidersEnum,
     url: string,
-  ): IAuthorization {
-    const redirect_uri = `${url}/${provider.toLowerCase()}/callback`;
+  ): IAuthParams {
+    const redirect_uri = `${url}/api/auth/ext/${provider}/callback`;
     const state = randomBytes(16).toString('hex');
 
     switch (provider) {
@@ -117,24 +122,11 @@ export class OAuthClass {
     }
   }
 
-  private static getUserDataUrl(provider: OAuthProvidersEnum): string {
-    switch (provider) {
-      case OAuthProvidersEnum.GOOGLE:
-        return 'https://www.googleapis.com/oauth2/v3/userinfo';
-      case OAuthProvidersEnum.MICROSOFT:
-        return 'https://graph.microsoft.com/v1.0/me';
-      case OAuthProvidersEnum.FACEBOOK:
-        return 'https://graph.facebook.com/v16.0/me?fields=email,name,picture';
-      case OAuthProvidersEnum.GITHUB:
-        return 'https://api.github.com/user';
-    }
-  }
-
   public async getToken(code: string): Promise<string> {
-    const result = await this._code.getToken({
+    const result = await this.code.getToken({
       code,
-      redirect_uri: this._authorization.redirect_uri,
-      scope: this._authorization.scope,
+      redirect_uri: this.authorization.redirect_uri,
+      scope: this.authorization.scope,
     });
     return result.token.access_token as string;
   }

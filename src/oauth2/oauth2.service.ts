@@ -1,16 +1,18 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
+*/
+
+/*
+  Free and Open Source - GNU LGPLv3
+  Copyright © 2023
+  Afonso Barracha
 */
 
 import { HttpService } from '@nestjs/axios';
@@ -45,7 +47,7 @@ export class Oauth2Service {
     private readonly httpService: HttpService,
     private readonly commonService: CommonService,
   ) {
-    const url = configService.get<string>('URL');
+    const url = configService.get<string>('url');
     this[OAuthProvidersEnum.MICROSOFT] = Oauth2Service.setOAuthClass(
       OAuthProvidersEnum.MICROSOFT,
       configService,
@@ -88,7 +90,7 @@ export class Oauth2Service {
     return this.getOAuth(provider).authorizationUrl;
   }
 
-  public async getUserData<T>(
+  public async getUserData<T extends Record<string, any>>(
     provider: OAuthProvidersEnum,
     cbQuery: ICallbackQuery,
   ): Promise<T> {
@@ -138,9 +140,9 @@ export class Oauth2Service {
     const oauth = this.getOAuth(provider);
 
     if (state !== oauth.state) {
-      throw new NotFoundException('Page not found');
+      throw new UnauthorizedException('Corrupted state');
     }
 
-    return this.commonService.throwInternalError(oauth.getToken(code));
+    return await this.commonService.throwInternalError(oauth.getToken(code));
   }
 }

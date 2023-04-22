@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -43,7 +39,8 @@ async function bootstrap(): Promise<void> {
   app.register(fastifyCookie, {
     secret: configService.get<string>('COOKIE_SECRET'),
   });
-  app.register(fastifyCsrf, { cookieOpts: { signed: true } });
+  // TODO: remove any when fastify-csrf-protection is updated
+  app.register(fastifyCsrf, { cookieOpts: { signed: true } } as any);
   app.register(mercuriusUpload, configService.get('upload'));
   app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),
@@ -54,7 +51,7 @@ async function bootstrap(): Promise<void> {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('NestJS API')
     .setDescription('An API made with NestJS')
-    .setVersion('0.3.0')
+    .setVersion('1.0.0')
     .addBearerAuth()
     .addTag('Authentication API')
     .build();

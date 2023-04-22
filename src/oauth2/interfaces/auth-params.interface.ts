@@ -9,9 +9,8 @@
  Afonso Barracha
 */
 
-export enum TokenTypeEnum {
-  ACCESS = 'access',
-  REFRESH = 'refresh',
-  CONFIRMATION = 'confirmation',
-  RESET_PASSWORD = 'resetPassword',
+export interface IAuthParams {
+  readonly redirect_uri: string;
+  readonly scope: string | string[];
+  readonly state: string;
 }

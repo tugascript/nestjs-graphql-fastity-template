@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -32,6 +28,7 @@ export function config(): IConfig {
   return {
     port: parseInt(process.env.PORT, 10),
     url: process.env.URL,
+    domain: process.env.DOMAIN,
     jwt: {
       access: {
         secret: process.env.JWT_ACCESS_SECRET,
@@ -66,6 +63,7 @@ export function config(): IConfig {
       },
     },
     bucketData: {
+      uuid: process.env.BUCKET_UUID,
       name: process.env.BUCKET_NAME,
       url: `https://${process.env.BUCKET_NAME}.${bucketBase}/`,
     },

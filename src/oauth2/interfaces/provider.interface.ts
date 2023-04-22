@@ -9,9 +9,11 @@
  Afonso Barracha
 */
 
-export enum TokenTypeEnum {
-  ACCESS = 'access',
-  REFRESH = 'refresh',
-  CONFIRMATION = 'confirmation',
-  RESET_PASSWORD = 'resetPassword',
+export interface IProvider {
+  readonly tokenHost: string;
+  readonly tokenPath: string;
+  readonly authorizeHost: string;
+  readonly authorizePath: string;
+  readonly refreshPath?: string;
+  readonly revokePath?: string;
 }

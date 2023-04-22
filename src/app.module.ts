@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -20,6 +16,7 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { GraphQLModule } from '@nestjs/graphql';
 import { MercuriusDriver } from '@nestjs/mercurius';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/guards/auth.guard';
@@ -28,6 +25,7 @@ import { config } from './config';
 import { CacheConfig } from './config/cache.config';
 import { GqlConfigService } from './config/graphql.config';
 import { MikroOrmConfig } from './config/mikroorm.config';
+import { ThrottlerConfig } from './config/throttler.config';
 import { validationSchema } from './config/validation.config';
 import { EmailModule } from './email/email.module';
 import { JwtModule } from './jwt/jwt.module';
@@ -55,6 +53,10 @@ import { UsersModule } from './users/users.module';
       imports: [ConfigModule, AuthModule, LoadersModule],
       driver: MercuriusDriver,
       useClass: GqlConfigService,
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      useClass: ThrottlerConfig,
     }),
     UsersModule,
     CommonModule,

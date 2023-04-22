@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -22,8 +18,8 @@ import {
   Unique,
 } from '@mikro-orm/core';
 import { IsEnum } from 'class-validator';
-import { IOAuthProvider } from '../../oauth2/interfaces/oauth-provider.interface';
 import { OAuthProvidersEnum } from '../enums/oauth-providers.enum';
+import { IOAuthProvider } from '../interfaces/oauth-provider.interface';
 import { UserEntity } from './user.entity';
 
 @Entity({ tableName: 'oauth_providers' })
@@ -36,20 +32,20 @@ export class OAuthProviderEntity implements IOAuthProvider {
     length: 9,
   })
   @IsEnum(OAuthProvidersEnum)
-  public provider: OAuthProvidersEnum;
+  public readonly provider: OAuthProvidersEnum;
 
   @ManyToOne({
     entity: () => UserEntity,
     primary: true,
     onDelete: 'cascade',
   })
-  public user: UserEntity;
+  public readonly user: UserEntity;
 
   @Property({ onCreate: () => new Date() })
-  public createdAt: Date = new Date();
+  public readonly createdAt: Date = new Date();
 
   @Property({ onUpdate: () => new Date() })
-  public updatedAt: Date = new Date();
+  public readonly updatedAt: Date = new Date();
 
   [PrimaryKeyType]?: [OAuthProvidersEnum, number];
 }

@@ -1,13 +1,9 @@
 /*
- Free and Open Source - GNU GPLv3
+ This file is part of Nest GraphQL Fastify Template
 
- This file is part of nestjs-graphql-fastify-template
-
- nestjs-graphql-fastify-template is distributed in the
- hope that it will be useful, but WITHOUT ANY WARRANTY;
- without even the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- General Public License for more details.
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
  Copyright © 2023
  Afonso Barracha
@@ -41,6 +37,7 @@ export const validationSchema = Joi.object({
   BUCKET_SECRET_KEY: Joi.string().required(),
   BUCKET_ACCESS_KEY: Joi.string().required(),
   BUCKET_REGION: Joi.string().required(),
+  BUCKET_UUID: Joi.string().uuid({ version: 'uuidv4' }).required(),
   REDIS_URL: Joi.string().required(),
   REDIS_CACHE_TTL: Joi.number().required(),
   MAX_FILE_SIZE: Joi.number().required(),
@@ -50,14 +47,10 @@ export const validationSchema = Joi.object({
   THROTTLE_LIMIT: Joi.number().required(),
   MICROSOFT_CLIENT_ID: Joi.string().optional(),
   MICROSOFT_CLIENT_SECRET: Joi.string().optional(),
-  MICROSOFT_REDIRECT_URI: Joi.string().optional(),
   GOOGLE_CLIENT_ID: Joi.string().optional(),
   GOOGLE_CLIENT_SECRET: Joi.string().optional(),
-  GOOGLE_REDIRECT_URI: Joi.string().optional(),
   FACEBOOK_CLIENT_ID: Joi.string().optional(),
   FACEBOOK_CLIENT_SECRET: Joi.string().optional(),
-  FACEBOOK_REDIRECT_URI: Joi.string().optional(),
   GITHUB_CLIENT_ID: Joi.string().optional(),
   GITHUB_CLIENT_SECRET: Joi.string().optional(),
-  GITHUB_REDIRECT_URI: Joi.string().optional(),
 });
