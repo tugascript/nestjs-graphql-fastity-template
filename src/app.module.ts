@@ -18,6 +18,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { MercuriusDriver } from '@nestjs/mercurius';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
+import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { AuthGuard } from './auth/guards/auth.guard';
 import { CommonModule } from './common/common.module';
@@ -68,6 +69,7 @@ import { UsersModule } from './users/users.module';
     Oauth2Module,
   ],
   providers: [
+    AppService,
     {
       provide: APP_GUARD,
       useClass: AuthGuard,

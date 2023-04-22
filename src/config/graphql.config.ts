@@ -9,25 +9,16 @@
  Afonso Barracha
 */
 
-import {
-  HttpException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GqlOptionsFactory } from '@nestjs/graphql';
 import { MercuriusDriverConfig, MercuriusPlugin } from '@nestjs/mercurius';
-import AltairFastify, {
-  AltairFastifyPluginOptions,
-} from 'altair-fastify-plugin';
-import { GraphQLError } from 'graphql';
 import Redis, { RedisOptions } from 'ioredis';
 import mercuriusCache, { MercuriusCacheOptions } from 'mercurius-cache';
 import mqRedis from 'mqemitter-redis';
 import { AuthService } from '../auth/auth.service';
 import { IGqlCtx } from '../common/interfaces/gql-ctx.interface';
 import { LoadersService } from '../loaders/loaders.service';
-import { ICustomError } from './interfaces/custom-error.interface';
 import { IWsCtx } from './interfaces/ws-ctx.interface';
 import { IWsParams } from './interfaces/ws-params.interface';
 import { isNull, isUndefined } from './utils/validation.util';
@@ -46,9 +37,7 @@ export class GqlConfigService
   ) {}
 
   public createGqlOptions(): MercuriusDriverConfig {
-    const plugins: MercuriusPlugin<
-      MercuriusCacheOptions | AltairFastifyPluginOptions
-    >[] = [
+    const plugins: MercuriusPlugin<MercuriusCacheOptions>[] = [
       {
         plugin: mercuriusCache,
         options: {
@@ -71,18 +60,6 @@ export class GqlConfigService
         } as MercuriusCacheOptions,
       },
     ];
-
-    if (this.testing) {
-      plugins.push({
-        plugin: AltairFastify,
-        options: {
-          path: '/altair',
-          baseURL: '/altair/',
-          endpointURL: '/api/graphql',
-        } as AltairFastifyPluginOptions,
-      });
-    }
-
     return {
       graphiql: false,
       ide: false,
@@ -138,16 +115,6 @@ export class GqlConfigService
         },
       },
       autoSchemaFile: './schema.gql',
-      errorFormatter: (error): ICustomError => {
-        const org = error.errors[0].originalError as HttpException;
-        return {
-          statusCode: org.getStatus(),
-          response: {
-            errors: [org.getResponse() as GraphQLError],
-            data: null,
-          },
-        };
-      },
       plugins,
     };
   }

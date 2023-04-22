@@ -11,7 +11,6 @@
 
 import { faker } from '@faker-js/faker';
 import fastifyCookie from '@fastify/cookie';
-import { MikroORM } from '@mikro-orm/core';
 import { HttpStatus, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -21,19 +20,23 @@ import {
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
+import { CommonService } from '../src/common/common.service';
 import { EmailService } from '../src/email/email.service';
 import { TokenTypeEnum } from '../src/jwt/enums/token-type.enum';
 import { JwtService } from '../src/jwt/jwt.service';
 import { OAuthProvidersEnum } from '../src/users/enums/oauth-providers.enum';
+import { OnlineStatusEnum } from '../src/users/enums/online-status.enum';
 import { IUser } from '../src/users/interfaces/user.interface';
 import { UsersService } from '../src/users/users.service';
+
+const GRAPHQL_ENDPOINT = '/api/graphql';
 
 describe('AppController (e2e)', () => {
   let app: NestFastifyApplication,
     emailService: EmailService,
     jwtService: JwtService,
-    usersService: UsersService,
-    orm: MikroORM;
+    commonService: CommonService,
+    usersService: UsersService;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -50,9 +53,7 @@ describe('AppController (e2e)', () => {
 
     jwtService = app.get(JwtService);
     usersService = app.get(UsersService);
-    orm = app.get<MikroORM>(MikroORM);
-    await orm.getSchemaGenerator().createSchema();
-
+    commonService = app.get(CommonService);
     const configService = app.get(ConfigService);
     await app.register(fastifyCookie, {
       secret: configService.get<string>('COOKIE_SECRET'),
@@ -540,9 +541,175 @@ describe('AppController (e2e)', () => {
     });
   });
 
+  describe('users', () => {
+    describe('queries', () => {
+      it('should get a user by ID', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .send({
+            query: `query {
+              userById(id: ${mockUser.id}) {
+                id
+                name
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+
+        expect(response.body.data.userById).toMatchObject({
+          id: mockUser.id,
+          name: commonService.formatTitle(mockUser.name),
+        });
+      });
+
+      it('should get a user by username', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .send({
+            query: `query {
+              userByUsername(username: "${commonService.generatePointSlug(
+                mockUser.name,
+              )}") {
+                id
+                name
+                username
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.userByUsername).toMatchObject({
+          id: mockUser.id,
+          name: commonService.formatTitle(mockUser.name),
+          username: commonService.generatePointSlug(mockUser.name),
+        });
+      });
+
+      it('should get users', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .send({
+            query: `query {
+              users {
+                edges {
+                  node {
+                    username
+                    name
+                  }
+                }
+                pageInfo {
+                  hasNextPage
+                  hasPreviousPage
+                }
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.users).toMatchObject({
+          edges: expect.any(Array),
+          pageInfo: {
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        });
+      });
+    });
+
+    describe('mutations', () => {
+      let accessToken: string;
+      const newName = faker.name.fullName();
+      const newEmail = faker.internet.email();
+      const newOnlineStatus = OnlineStatusEnum.IDLE;
+
+      beforeAll(async () => {
+        const response = await request(app.getHttpServer())
+          .post('/api/auth/sign-in')
+          .send({
+            emailOrUsername: email,
+            password: password,
+          })
+          .expect(HttpStatus.OK);
+        accessToken = response.body.accessToken;
+      });
+
+      it('should update name', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            query: `mutation {
+              updateUserName(name: "${newName}") {
+                id
+                name
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.updateUserName).toMatchObject({
+          id: mockUser.id,
+          name: commonService.formatTitle(newName),
+        });
+      });
+
+      it('should update email', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            query: `mutation {
+              updateUserEmail(email: "${newEmail}", password: "${password}") {
+                id
+                email
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.updateUserEmail).toMatchObject({
+          id: mockUser.id,
+          email: newEmail.toLowerCase(),
+        });
+      });
+
+      it('should update online status', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            query: `mutation {
+              updateUserOnlineStatus(onlineStatus: ${newOnlineStatus}) {
+                id
+                defaultStatus
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.updateUserOnlineStatus).toMatchObject({
+          id: mockUser.id,
+          defaultStatus: newOnlineStatus,
+        });
+      });
+
+      it('should delete user', async () => {
+        const response = await request(app.getHttpServer())
+          .post(GRAPHQL_ENDPOINT)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({
+            query: `mutation {
+              deleteUser(password: "${password}") {
+                id
+                message
+              }
+            }`,
+          })
+          .expect(HttpStatus.OK);
+        expect(response.body.data.deleteUser).toMatchObject({
+          id: expect.any(String),
+          message: 'User deleted successfully',
+        });
+      });
+    });
+  });
+
   afterAll(async () => {
-    await orm.getSchemaGenerator().dropSchema();
-    await orm.close(true);
     await app.close();
   });
 });

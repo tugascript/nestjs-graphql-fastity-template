@@ -28,6 +28,7 @@ import {
   IsUrl,
   Length,
   Matches,
+  MaxLength,
 } from 'class-validator';
 import {
   NAME_REGEX,
@@ -62,15 +63,17 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   public username: string;
 
   @Field(() => String, { nullable: true })
-  @Property({ columnType: 'varchar', length: 255 })
+  @Property({ columnType: 'varchar', length: 250 })
   @IsString()
+  @Length(5, 250)
   @IsEmail()
-  @Length(5, 255)
   public email: string;
 
   @Field(() => String, { nullable: true })
-  @Property({ columnType: 'varchar(255)', nullable: true })
+  @Property({ columnType: 'varchar', length: 250, nullable: true })
   @IsOptional()
+  @IsString()
+  @MaxLength(250)
   @IsUrl()
   public picture?: string;
 
@@ -78,7 +81,8 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @Enum({
     items: () => OnlineStatusEnum,
     default: OnlineStatusEnum.OFFLINE,
-    columnType: 'varchar(14)',
+    columnType: 'varchar',
+    length: 9,
   })
   @IsEnum(OnlineStatusEnum)
   public onlineStatus: OnlineStatusEnum = OnlineStatusEnum.OFFLINE;
@@ -87,7 +91,8 @@ export class UserEntity extends LocalBaseEntity implements IUser {
   @Enum({
     items: () => OnlineStatusEnum,
     default: OnlineStatusEnum.ONLINE,
-    columnType: 'varchar(14)',
+    columnType: 'varchar',
+    length: 9,
   })
   @IsEnum(OnlineStatusEnum)
   public defaultStatus: OnlineStatusEnum = OnlineStatusEnum.ONLINE;

@@ -18,9 +18,8 @@ type User {
 
 enum OnlineStatus {
   ONLINE
-  BUSY
   IDLE
-  DO_NOT_DISTURB
+  BUSY
   INVISIBLE
   OFFLINE
 }
@@ -68,11 +67,12 @@ enum ChangeType {
 type Query {
   userById(id: Int!): User!
   userByUsername(username: String!): User!
-  queryUsers(after: String, first: Int! = 10, search: String): PaginatedUsers!
+  users(after: String, first: Int! = 10, search: String): PaginatedUsers!
 }
 
 type Mutation {
   updateUserPicture(picture: Upload!): User!
+  removeUserPicture: User!
   updateUserOnlineStatus(onlineStatus: OnlineStatus!): User!
   updateUserName(name: String!): User!
   updateUserEmail(password: String!, email: String!): User!

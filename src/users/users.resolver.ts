@@ -131,7 +131,7 @@ export class UsersResolver {
 
   @Public()
   @Query(() => PaginatedUsersType)
-  public async queryUsers(@Args() dto: SearchDto): Promise<IPaginated<IUser>> {
+  public async users(@Args() dto: SearchDto): Promise<IPaginated<IUser>> {
     return this.usersService.query(dto);
   }
 

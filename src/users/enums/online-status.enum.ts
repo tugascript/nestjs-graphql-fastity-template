@@ -13,9 +13,8 @@ import { registerEnumType } from '@nestjs/graphql';
 
 export enum OnlineStatusEnum {
   ONLINE = 'ONLINE',
-  BUSY = 'BUSY',
   IDLE = 'IDLE',
-  DO_NOT_DISTURB = 'DO_NOT_DISTURB',
+  BUSY = 'BUSY',
   INVISIBLE = 'INVISIBLE',
   OFFLINE = 'OFFLINE',
 }
