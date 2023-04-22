@@ -4,7 +4,16 @@
   "description": "NestJS & Mercurius GraphQL API Template",
   "author": "Afonso Barracha",
   "private": true,
-  "license": "MPL-2.0",
+  "licenses": [
+    {
+      "type": "MPL-2.0",
+      "url": "https://www.mozilla.org/en-US/MPL/2.0/"
+    },
+    {
+      "type": "GPL-3.0-only",
+      "url": "https://www.gnu.org/licenses/gpl-3.0.html"
+    }
+  ],
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",

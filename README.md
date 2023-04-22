@@ -281,4 +281,6 @@ to [support them.](https://opencollective.com/libvips)
 
 ## License
 
-This project is [Mozilla Public License 2.0](LICENSE) licensed.
+This project is dual licensed under the [Mozilla Public License 2.0](LICENSE-MPLv2) and
+the [GNU General Public License version 3](LICENSE-GPLv3). You may use, distribute, and modify files in this project
+under the terms of either the MPLv2 or GPLv3, at your option.

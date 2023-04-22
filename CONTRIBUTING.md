@@ -26,6 +26,7 @@ pull request:
 
 ## License
 
-By submitting a contribution, you agree that your contributions will be licensed under the MPLv2.0 license, as described
-in the [LICENSE](LICENSE) file.
+By submitting a contribution, you agree that your contributions will be dual-licensed under the MPLv2.0 and GPLv3
+licenses. Users can choose which license to follow when using, modifying, or distributing the project. The details of
+both licenses can be found in the [LICENSE-MPLv2](LICENSE-MPLv2) and [LICENSE-GPLv3](LICENSE-GPLv3) files.
 

@@ -459,7 +459,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.0.0-experimental-51a3aa6af
  * react-is.production.min.js
@@ -467,7 +467,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.0.0-experimental-51a3aa6af
  * react.production.min.js
@@ -475,7 +475,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.18.0
  * scheduler-tracing.development.js
@@ -483,7 +483,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.18.0
  * scheduler-tracing.production.min.js
@@ -491,7 +491,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.18.0
  * scheduler.development.js
@@ -499,7 +499,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.18.0
  * scheduler.production.min.js
@@ -507,7 +507,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.24.0
  * react-reconciler.development.js
@@ -515,7 +515,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v0.24.0
  * react-reconciler.production.min.js
@@ -523,7 +523,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v16.13.1
  * react.development.js
@@ -531,7 +531,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 /** @license React v16.13.1
  * react.production.min.js
@@ -539,7 +539,7 @@ object-assign
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
  * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
+ * LICENSE-MPLv2 file in the root directory of this source tree.
  */
 return plugin;
 }
