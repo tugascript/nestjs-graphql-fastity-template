@@ -128,7 +128,7 @@
       "./dist/mikro-orm.config.js"
     ]
   },
-  "packageManager": "yarn@3.4.1",
+  "packageManager": "yarn@3.5.0",
   "resolutions": {
     "mercurius/@fastify/websocket": "7.2.0"
   }
