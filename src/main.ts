@@ -48,7 +48,7 @@ async function bootstrap(): Promise<void> {
   app.register(mercuriusUpload, configService.get('upload'));
   app.register(fastifyStatic, {
     root: join(__dirname, '..', 'public'),
-    decorateReply: !testing,
+    decorateReply: true,
   });
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
