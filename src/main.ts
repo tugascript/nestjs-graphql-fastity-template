@@ -28,6 +28,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import mercuriusUpload from 'mercurius-upload';
 import { join } from 'path';
 import { AppModule } from './app.module';
+import { Cluster } from './cluster';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -68,4 +69,4 @@ async function bootstrap(): Promise<void> {
   );
 }
 
-bootstrap();
+Cluster.createCluster(bootstrap);

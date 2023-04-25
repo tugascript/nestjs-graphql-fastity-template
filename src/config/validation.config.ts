@@ -57,4 +57,5 @@ export const validationSchema = Joi.object({
   FACEBOOK_CLIENT_SECRET: Joi.string().optional(),
   GITHUB_CLIENT_ID: Joi.string().optional(),
   GITHUB_CLIENT_SECRET: Joi.string().optional(),
+  WORKERS_COUNT: Joi.number().optional(),
 });
