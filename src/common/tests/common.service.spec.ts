@@ -26,7 +26,7 @@ interface IData {
 
 const data: IData[] = new Array(50).fill(null).map((_, i) => ({
   id: i + 1,
-  name: faker.name.fullName(),
+  name: faker.person.fullName(),
   email: faker.internet.email(),
 }));
 

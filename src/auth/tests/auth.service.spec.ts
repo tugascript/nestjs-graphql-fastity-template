@@ -90,9 +90,9 @@ describe('AuthService', () => {
     jest.spyOn(emailService, 'sendEmail').mockImplementation();
   });
 
-  const name = faker.name.firstName();
+  const name = faker.person.firstName();
   const email = faker.internet.email().toLowerCase();
-  const password = faker.internet.password(10);
+  const password = faker.internet.password({ length: 10 });
   const baseUser = {
     id: 1,
     email,
@@ -131,7 +131,7 @@ describe('AuthService', () => {
       const password = faker.internet.password(10);
       await expect(
         authService.signUp({
-          name: faker.name.firstName(),
+          name: faker.person.firstName(),
           email: faker.internet.email(),
           password1: password,
           password2: password + '1',

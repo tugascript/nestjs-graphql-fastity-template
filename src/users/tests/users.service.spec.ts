@@ -68,8 +68,8 @@ describe('UsersService', () => {
 
   const email = faker.internet.email();
   const email2 = faker.internet.email();
-  const name = faker.name.firstName();
-  const password = faker.internet.password(8);
+  const name = faker.person.firstName();
+  const password = faker.internet.password();
 
   it('should be defined', () => {
     expect(module).toBeDefined();
@@ -95,8 +95,8 @@ describe('UsersService', () => {
         service.create(
           OAuthProvidersEnum.LOCAL,
           email,
-          faker.name.firstName(),
-          faker.internet.password(8),
+          faker.person.firstName(),
+          faker.internet.password({ length: 8 }),
         ),
       ).rejects.toThrowError('Email already in use');
     });
@@ -106,7 +106,7 @@ describe('UsersService', () => {
         OAuthProvidersEnum.LOCAL,
         email2,
         name,
-        faker.internet.password(8),
+        faker.internet.password({ length: 8 }),
       );
       expect(user).toBeInstanceOf(UserEntity);
       expect(user.username).toEqual(
@@ -211,7 +211,7 @@ describe('UsersService', () => {
     });
 
     describe('password', () => {
-      const newPassword = faker.internet.password(8);
+      const newPassword = faker.internet.password({ length: 8 });
 
       it('should update a user password', async () => {
         const user = await service.updatePassword(1, password, newPassword);
@@ -245,7 +245,7 @@ describe('UsersService', () => {
 
       it('should throw an unauthorized exception', async () => {
         await expect(
-          service.resetPassword(1, 0, faker.internet.password(8)),
+          service.resetPassword(1, 0, faker.internet.password({ length: 8 })),
         ).rejects.toThrowError('Invalid credentials');
       });
     });

@@ -16,7 +16,7 @@
 import { ArgsType, Field } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { ValidatePromise } from 'class-validator';
-import GraphQLUpload from 'graphql-upload/GraphQLUpload.js';
+import { GraphQLUpload } from 'graphql-upload-minimal';
 import { FileUploadDto } from './file-upload.dto';
 
 @ArgsType()

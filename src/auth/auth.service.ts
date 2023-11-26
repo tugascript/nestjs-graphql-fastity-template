@@ -460,6 +460,7 @@ export class AuthService {
       this.cacheManager.set(
         `${this.twoFactorPrefix}:${user.email}`,
         await hash(code, 5),
+        this.twoFactorTime * 1000,
       ),
     );
     this.emailService.sendAccessCode(user, code);

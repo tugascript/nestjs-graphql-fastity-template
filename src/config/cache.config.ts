@@ -13,11 +13,8 @@
  Afonso Barracha
 */
 
-import {
-  CacheModuleOptions,
-  CacheOptionsFactory,
-  Injectable,
-} from '@nestjs/common';
+import { CacheModuleOptions, CacheOptionsFactory } from '@nestjs/cache-manager';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-ioredis-yet';
 

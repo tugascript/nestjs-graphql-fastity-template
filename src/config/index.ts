@@ -78,7 +78,7 @@ export function config(): IConfig {
           clientUrl: process.env.DATABASE_URL,
         }),
     redis: testing ? undefined : redisUrlToOptions(process.env.REDIS_URL),
-    ttl: parseInt(process.env.REDIS_CACHE_TTL, 10),
+    ttl: parseInt(process.env.REDIS_CACHE_TTL, 10) * 1000,
     upload: {
       maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10),
       maxFiles: parseInt(process.env.MAX_FILES, 10),

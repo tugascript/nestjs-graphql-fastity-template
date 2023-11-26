@@ -122,7 +122,7 @@ describe('Oauth2Service', () => {
 
   describe('login', () => {
     const email = faker.internet.email();
-    const name = faker.name.fullName();
+    const name = faker.person.fullName();
 
     it('should create a new user', async () => {
       const [accessToken, refreshToken] = await oauth2Service.login(

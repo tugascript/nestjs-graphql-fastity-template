@@ -15,7 +15,7 @@
 
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { MikroOrmModuleOptions } from '@mikro-orm/nestjs';
-import { ThrottlerModuleOptions } from '@nestjs/throttler';
+import {ThrottlerModuleOptions, ThrottlerOptions} from '@nestjs/throttler';
 import { UploadOptions } from 'graphql-upload/processRequest';
 import { RedisOptions } from 'ioredis';
 import { IBucketData } from './bucket-data.inteface';
@@ -38,6 +38,6 @@ export interface IConfig {
   readonly testing: boolean;
   readonly sessionTime: number;
   readonly twoFactorTime: number;
-  readonly throttler: ThrottlerModuleOptions;
+  readonly throttler: ThrottlerOptions;
   readonly oauth2: IOAuth2;
 }

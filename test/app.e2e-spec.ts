@@ -72,9 +72,9 @@ describe('AppController (e2e)', () => {
     await app.getHttpAdapter().getInstance().ready();
   });
 
-  const name = faker.name.firstName();
+  const name = faker.person.firstName();
   const email = faker.internet.email().toLowerCase();
-  const password = faker.internet.password(10) + 'A1!';
+  const password = faker.internet.password({ length: 10 }) + 'A1!';
   const mockUser = {
     id: 1,
     name,
@@ -142,7 +142,7 @@ describe('AppController (e2e)', () => {
             name,
             email,
             password1: password,
-            password2: faker.internet.password(10),
+            password2: faker.internet.password({ length: 10 }),
           })
           .expect(HttpStatus.BAD_REQUEST);
       });
@@ -160,7 +160,7 @@ describe('AppController (e2e)', () => {
       });
 
       it('should throw 400 error if password is too short', async () => {
-        const newPassword = faker.internet.password(5);
+        const newPassword = faker.internet.password({ length: 5 });
         await request(app.getHttpServer())
           .post(signUpUrl)
           .send({
@@ -282,7 +282,7 @@ describe('AppController (e2e)', () => {
       });
 
       it('should throw 401 error if user is not confirmed', async () => {
-        const newName = faker.name.firstName();
+        const newName = faker.person.firstName();
         await usersService.create(
           OAuthProvidersEnum.LOCAL,
           newEmail,
@@ -304,7 +304,7 @@ describe('AppController (e2e)', () => {
           .post(signInUrl)
           .send({
             emailOrUsername: email,
-            password: faker.internet.password(10),
+            password: faker.internet.password({ length: 10 }),
           })
           .expect(HttpStatus.UNAUTHORIZED);
       });
@@ -416,7 +416,7 @@ describe('AppController (e2e)', () => {
       });
     });
 
-    const newPassword = faker.internet.password(10) + 'A1!';
+    const newPassword = faker.internet.password({ length: 10 }) + 'A1!';
     describe('reset-password', () => {
       const resetPasswordUrl = `${baseUrl}/reset-password`;
 
@@ -620,7 +620,7 @@ describe('AppController (e2e)', () => {
 
     describe('mutations', () => {
       let accessToken: string;
-      const newName = faker.name.fullName();
+      const newName = faker.person.fullName();
       const newEmail = faker.internet.email();
       const newOnlineStatus = OnlineStatusEnum.IDLE;
 
